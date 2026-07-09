@@ -44,6 +44,18 @@ test_that("resolve_disease() handles a pasted ontology id", {
   expect_equal(cand$name, "breast carcinoma")
 })
 
+test_that("resolve_disease() preserves case for mixed-case ids (Orphanet)", {
+  seen <- NULL
+  fake <- function(query, variables = list(), ...) {
+    seen <<- variables$efoId
+    list(disease = list(id = variables$efoId, name = "some rare disease"))
+  }
+  cand <- resolve_disease("Orphanet:158673", graphql_fn = fake)
+  # ":" -> "_" but case preserved (Open Targets uses "Orphanet_...", not upper).
+  expect_equal(seen, "Orphanet_158673")
+  expect_equal(cand$id, "Orphanet_158673")
+})
+
 test_that("resolve_disease() returns empty on blank or no match", {
   expect_equal(nrow(resolve_disease("", graphql_fn = function(...) NULL)), 0)
   empty <- function(...) list(search = list(hits = list()))

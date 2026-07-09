@@ -95,10 +95,11 @@ panelapp_best_panel <- function(panels, disease_name) {
     integer(1)
   )
   best <- which.max(score)
-  # Require a majority of disease tokens to match (and at least one).
-  if (
-    length(best) == 0 || score[[best]] < max(1, ceiling(length(tokens) / 2))
-  ) {
+  # Require a strict majority of disease tokens to match (and at least one), so
+  # a generic panel sharing one broad token (e.g. only "cancer") is not treated
+  # as disease-specific.
+  min_match <- floor(length(tokens) / 2) + 1
+  if (length(best) == 0 || score[[best]] < min_match) {
     return(NULL)
   }
   panels[[best]]

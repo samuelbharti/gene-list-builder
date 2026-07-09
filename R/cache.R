@@ -31,14 +31,3 @@ cache_set <- function(key, value) {
   saveRDS(value, .cache_file(key))
   invisible(value)
 }
-
-# Run `compute()` with caching. `force = TRUE` ignores any cached value.
-with_cache <- function(key, compute, force = FALSE) {
-  if (!force) {
-    hit <- cache_get(key)
-    if (!is.null(hit)) {
-      return(hit)
-    }
-  }
-  cache_set(key, compute())
-}

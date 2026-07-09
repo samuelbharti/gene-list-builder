@@ -49,7 +49,7 @@ aggregate_sources <- function(
   parts <- split(combined, combined$source_id)
   parts <- lapply(parts, function(df) {
     sid <- df$source_id[[1]]
-    method <- if (!is.null(norm_methods) && !is.null(norm_methods[[sid]])) {
+    method <- if (!is.null(norm_methods) && sid %in% names(norm_methods)) {
       norm_methods[[sid]]
     } else {
       "rank"
@@ -105,6 +105,11 @@ aggregate_sources <- function(
       ),
       .groups = "drop"
     )
+
+  # Drop annotation-only genes: a gene with no evidence source (e.g. one a
+  # gene-driven annotation source canonicalized to a symbol absent from every
+  # evidence source) must not enter the candidate list.
+  prov <- prov[prov$n_sources > 0, , drop = FALSE]
 
   dplyr::left_join(prov, wide, by = "gene_symbol")
 }

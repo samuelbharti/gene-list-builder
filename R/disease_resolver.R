@@ -50,7 +50,9 @@ resolve_disease <- function(term, limit = 10, graphql_fn = ot_graphql) {
   }
 
   if (is_disease_id(term)) {
-    efo <- toupper(gsub(":", "_", term))
+    # Preserve case: Open Targets ids are mixed-case for some ontologies
+    # (e.g. "Orphanet_158673"), so we only swap the ":" separator for "_".
+    efo <- gsub(":", "_", term)
     data <- graphql_fn(OT_DISEASE_QUERY, list(efoId = efo))
     d <- data$disease
     if (is.null(d)) {

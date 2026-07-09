@@ -91,14 +91,19 @@ evidence_source_ids <- function(ids = NULL) {
     if (identical(src$needs, "genes")) rlang::hash(sort(gene_symbols)) else ""
   )
   t0 <- Sys.time()
-  result <- tryCatch(
-    with_cache(
-      key,
-      function() src$fetch_fn(disease = disease, gene_symbols = gene_symbols),
-      force = force
-    ),
-    error = function(e) e
-  )
+  result <- if (!force) cache_get(key) else NULL
+  if (is.null(result)) {
+    result <- tryCatch(
+      src$fetch_fn(disease = disease, gene_symbols = gene_symbols),
+      error = function(e) e
+    )
+    # Cache only successful, non-empty results. Adapters return an empty table
+    # on network/API error, so caching empties would pin a transient failure;
+    # leaving them uncached lets the next run retry.
+    if (!inherits(result, "error") && nrow(result) > 0) {
+      cache_set(key, result)
+    }
+  }
   latency <- as.numeric(difftime(Sys.time(), t0, units = "secs")) * 1000
 
   if (inherits(result, "error")) {

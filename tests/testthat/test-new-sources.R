@@ -146,7 +146,12 @@ test_that("annotation sources score but do not inflate coverage", {
     "opentargets"
   )
   gn <- as_gene_table(
-    data.frame(gene_symbol = c("TP53", "EGFR"), source_score_raw = c(0.4, 0.9)),
+    data.frame(
+      # PHANTOM is present only in the annotation source (e.g. an alias the
+      # source canonicalized to a symbol no evidence source reported).
+      gene_symbol = c("TP53", "EGFR", "PHANTOM"),
+      source_score_raw = c(0.4, 0.9, 0.2)
+    ),
     "gnomad"
   )
   agg <- aggregate_sources(
@@ -154,6 +159,7 @@ test_that("annotation sources score but do not inflate coverage", {
     norm_methods = c(opentargets = "passthrough", gnomad = "rank_desc"),
     evidence_ids = "opentargets"
   )
+  expect_false("PHANTOM" %in% agg$gene_symbol) # annotation-only gene dropped
   expect_equal(agg$n_sources, c(1L, 1L)) # gnomad not counted
   expect_false(any(grepl("gnomad", agg$sources)))
   expect_true("score_gnomad" %in% names(agg))

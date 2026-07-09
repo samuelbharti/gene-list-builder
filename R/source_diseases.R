@@ -89,13 +89,20 @@ fetch_diseases <- function(
 
   # Keep the strongest score per gene across the two channels.
   agg <- both |>
-    dplyr::filter(!is.na(.data$gene_symbol), nzchar(.data$gene_symbol)) |>
+    dplyr::filter(
+      !is.na(.data$gene_symbol),
+      nzchar(.data$gene_symbol),
+      is.finite(.data$score)
+    ) |>
     dplyr::group_by(.data$gene_symbol) |>
     dplyr::summarise(
-      source_score_raw = max(.data$score, na.rm = TRUE),
+      source_score_raw = max(.data$score),
       url = first_non_na(.data$url),
       .groups = "drop"
     )
+  if (nrow(agg) == 0) {
+    return(empty_gene_table())
+  }
   agg$evidence_type <- "diseases_association"
 
   as_gene_table(agg, "diseases")

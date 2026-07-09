@@ -25,7 +25,9 @@ run_pipeline_server <- function(
 ) {
   moduleServer(id, function(input, output, session) {
     eventReactive(input$run, {
-      disease <- disease_reactive()
+      # disease_reactive derives from an eventReactive that errors before a
+      # disease is resolved; catch that so the guidance message can show.
+      disease <- tryCatch(disease_reactive(), error = function(e) NULL)
       validate(need(!is.null(disease), "Resolve and select a disease first."))
       sources <- sources_reactive()
       validate(need(length(sources) > 0, "Select at least one data source."))

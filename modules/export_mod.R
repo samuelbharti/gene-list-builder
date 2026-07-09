@@ -31,8 +31,11 @@ export_server <- function(
       content = function(file) {
         ranked <- ranked_reactive()
         req(!is.null(ranked), nrow(ranked) > 0)
+        # Curation is optional; fall back to the full ranked list if the
+        # "Curate with AI" step has not run yet.
+        cur <- tryCatch(curated_reactive(), error = function(e) NULL)
         utils::write.csv(
-          build_export_csv(ranked, curated_reactive(), included_only = TRUE),
+          build_export_csv(ranked, cur, included_only = TRUE),
           file,
           row.names = FALSE
         )
@@ -44,7 +47,7 @@ export_server <- function(
       content = function(file) {
         ranked <- ranked_reactive()
         req(!is.null(ranked), nrow(ranked) > 0)
-        cur <- curated_reactive()
+        cur <- tryCatch(curated_reactive(), error = function(e) NULL)
         md <- build_report_md(
           disease_reactive(),
           status_reactive(),
