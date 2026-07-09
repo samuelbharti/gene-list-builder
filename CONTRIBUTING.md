@@ -21,8 +21,8 @@
 - Keep page UI definitions in `userInterface/`.
 - Keep reusable UI/server logic in `modules/`.
 - Keep utility functions in `R/` (auto-sourced by `R/load_components.R`).
-- Format R code with [air](https://posit-dev.github.io/air/): `air format .`
-- Lint with `lintr::lint_dir(".")` (config in `.lintr`).
+- Format R code with [air](https://posit-dev.github.io/air/): check with
+  `air format --check .` and apply with `air format .` (config in `air.toml`).
 
 ## Testing
 
@@ -60,7 +60,7 @@ pass locally before opening a PR.
 ## Pull Request Checklist
 
 - [ ] App runs locally (`shiny::runApp()`).
-- [ ] Code is formatted (`air format .`) and lints clean (`lintr::lint_dir(".")`).
+- [ ] Code is formatted (`air format --check .` passes).
 - [ ] Tests pass (`shiny::runTests(".")`).
 - [ ] New/changed code follows the project structure.
 - [ ] README/docs updated if behavior changed.
