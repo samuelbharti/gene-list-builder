@@ -1,0 +1,44 @@
+# Lightweight on-disk cache for source responses -------------------------------
+#
+# Keyed on a string built from (disease id, source id, options) so repeated runs
+# and slider tuning don't re-hit the APIs. The "force refresh" toggle in the UI
+# bypasses reads. Cache lives under data/cache/ (git-ignored).
+
+cache_dir <- function() {
+  dir <- Sys.getenv("GLB_CACHE_DIR", unset = file.path("data", "cache"))
+  if (!dir.exists(dir)) {
+    dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  }
+  dir
+}
+
+# Build a stable string key from arbitrary parts.
+cache_key <- function(...) {
+  parts <- lapply(list(...), function(x) paste(as.character(x), collapse = "|"))
+  paste(unlist(parts), collapse = "::")
+}
+
+.cache_file <- function(key) {
+  file.path(cache_dir(), paste0(rlang::hash(key), ".rds"))
+}
+
+cache_get <- function(key) {
+  f <- .cache_file(key)
+  if (file.exists(f)) readRDS(f) else NULL
+}
+
+cache_set <- function(key, value) {
+  saveRDS(value, .cache_file(key))
+  invisible(value)
+}
+
+# Run `compute()` with caching. `force = TRUE` ignores any cached value.
+with_cache <- function(key, compute, force = FALSE) {
+  if (!force) {
+    hit <- cache_get(key)
+    if (!is.null(hit)) {
+      return(hit)
+    }
+  }
+  cache_set(key, compute())
+}
