@@ -1,8 +1,7 @@
 navbarPage(
-  title = "My App",
-  # Apply branding from _brand.yml (colors, fonts). brand = TRUE requires the
-  # file to exist; switch to bslib::bs_theme() to make it optional.
+  title = "Gene List Builder",
+  # Apply branding from _brand.yml (colors, fonts).
   theme = bslib::bs_theme(brand = TRUE),
-  tabPanel("Home", home_page),
-  tabPanel("Other", other_page)
+  tabPanel("Build", builder_page),
+  tabPanel("About", about_page)
 )
