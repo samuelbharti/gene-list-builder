@@ -13,3 +13,12 @@ renv/staging/
 
 # Local development helpers
 dev/.Rhistory
+
+# Local planning / agent artifacts (never committed)
+docs/plans/
+/plans/
+/skills/
+.claude/
+
+# Cached API responses (regenerated at runtime)
+data/cache/

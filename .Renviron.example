@@ -1,7 +1,16 @@
 # Example environment file. Copy to `.Renviron` (which is git-ignored) and fill
 # in real values. R reads `.Renviron` automatically on startup.
 #
-# Examples:
-# APP_DATA_DIR=data
-# DATABASE_URL=postgres://user:pass@host:5432/dbname
-# API_TOKEN=replace-me
+# --- Gene List Builder ---
+#
+# Google Gemini API key for the AI curation step. Without it the app still
+# works: curation falls back to a top-N-by-rank selection.
+# GEMINI_API_KEY=replace-me
+#
+# Optional: override the Gemini model used for curation.
+# GLB_GEMINI_MODEL=gemini-2.0-flash
+#
+# Optional: NCBI E-utilities credentials (only needed once a ClinVar/NCBI Gene
+# source is added; raises the request rate limit). Not used by the v1 sources.
+# ENTREZ_KEY=replace-me
+# ENTREZ_EMAIL=you@example.org
