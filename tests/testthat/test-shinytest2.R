@@ -25,11 +25,21 @@ test_that("app boots and builds a gene list (offline demo mode)", {
 
   app$set_inputs(`disease-choice` = "MONDO_0008903")
   app$click("run-run")
-  app$wait_for_idle(timeout = 20000)
+  app$wait_for_idle(timeout = 30000)
 
-  # Switch to the ranked tab and confirm a demo gene shows up.
+  # Switch to the ranked tab and confirm a demo gene shows up. The table is a
+  # server-side DT whose rows arrive via a separate DataTables Ajax call that
+  # Shiny's idle state does not track, so poll until it paints (robust on slow
+  # CI runners) rather than reading the HTML once.
   app$set_inputs(steps = "2. Ranked")
-  app$wait_for_idle()
-  html <- app$get_html("#results-tbl")
-  expect_true(grepl("EGFR", html))
+  rendered <- FALSE
+  for (i in seq_len(20)) {
+    app$wait_for_idle(timeout = 15000)
+    if (grepl("EGFR", app$get_html("#results-tbl"))) {
+      rendered <- TRUE
+      break
+    }
+    Sys.sleep(0.5)
+  }
+  expect_true(rendered)
 })
