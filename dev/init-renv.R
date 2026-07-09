@@ -15,9 +15,13 @@ if (!file.exists("renv.lock")) {
     "bslib",
     "brand.yml",
     "dplyr",
-    "ggplot2",
+    "tibble",
+    "tidyr",
+    "rlang",
     "DT",
-    "plotly"
+    "shinycssloaders",
+    "httr2",
+    "ellmer"
   ))
   renv::snapshot()
   message(
