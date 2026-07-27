@@ -1,7 +1,138 @@
-navbarPage(
+# --- Theme: clean, minimal light Sass pass -----------------------------------
+# Palette lives in _brand.yml (neutral dark-grey text on a soft off-white
+# ground, a single dusty-blue accent). This layers a restrained, flat look:
+# white cards with hairline borders for hierarchy (so the page doesn't read as
+# one flat colour), a clean bordered navbar, gently rounded controls, and a
+# slim themed scrollbar. Hexes mirror _brand.yml (kept literal here so the CSS
+# stays a plain string).
+.glb_theme <- bslib::bs_add_rules(
+  bslib::bs_theme(brand = TRUE),
+  "
+  /* Light grey canvas so white cards read as intentional surfaces (the
+     standard dashboard pattern) rather than white boxes floating on white. */
+  body { background-color: #EEF1F4; }
+
+  /* White cards + hairline border + a whisper of shadow = clear hierarchy
+     without heavy colour. */
+  .card {
+    background-color: #FFFFFF;
+    border: 1px solid #E3E6EA;
+    border-radius: 0.6rem;
+    box-shadow: 0 1px 2px rgba(43, 46, 51, 0.05);
+  }
+  .card-header {
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #EDECE8;
+    font-weight: 600;
+  }
+  .bslib-value-box { border-radius: 0.6rem; }
+
+  /* Gently rounded, tactile controls. */
+  .btn { border-radius: 0.5rem; }
+  .form-control, .form-select, .selectize-input { border-radius: 0.5rem; }
+
+  /* Clean white navbar with a hairline base; dark text, accent on hover/active
+     (the accent itself comes from _brand.yml via Bootstrap variables). */
+  .navbar {
+    background-color: #FFFFFF !important;
+    border-bottom: 1px solid #E7E6E2;
+    box-shadow: none;
+  }
+  .navbar .navbar-brand, .navbar .nav-link { color: #2B2E33 !important; }
+  .navbar .nav-link:hover,
+  .navbar .nav-link.active { color: #4E6E8E !important; }
+  #demo_tour { border-radius: 2rem; font-weight: 600; }
+
+  /* Slim, themed scrollbars (the default white track looked jarring on the
+     off-white ground). */
+  * { scrollbar-width: thin; scrollbar-color: #BFC6CE transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background-color: #BFC6CE;
+    border-radius: 8px;
+    border: 2px solid #EEF1F4;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: #A2ABB5; }
+
+  /* Consistent horizontal gutter on each page's content (not the navbar). */
+  .bslib-page-navbar > .container-fluid > .tab-content > .tab-pane {
+    padding-left: 4vw;
+    padding-right: 4vw;
+  }
+
+  /* Tighten the build sidebar: no title, minimal top padding, so the Disease
+     input sits near the top instead of below a big empty gap. */
+  .glb-build-sidebar > .sidebar-content { padding-top: 0.5rem !important; }
+  .glb-build-sidebar > .sidebar-content > div:first-child { margin-top: 0; }
+  "
+)
+
+bslib::page_navbar(
+  id = "main_nav",
   title = "Gene List Builder",
-  # Apply branding from _brand.yml (colors, fonts).
-  theme = bslib::bs_theme(brand = TRUE),
-  tabPanel("Build", builder_page),
-  tabPanel("About", about_page)
+  # Branding from _brand.yml + the clean minimal Sass pass above.
+  theme = .glb_theme,
+  # Load shinyjs (demo auto-clicks the Resolve button) and cicerone (guided
+  # tour) JS/CSS once for the whole app.
+  header = tagList(
+    shinyjs::useShinyjs(),
+    cicerone::use_cicerone(),
+    # Let the server click a control by DOM id (used by the assistant's tools to
+    # drive Resolve / Build, and reused generally). Fire-and-forget from any
+    # context via session$sendCustomMessage("glb_click", "<id>").
+    tags$script(HTML(
+      "Shiny.addCustomMessageHandler('glb_click', function(id){",
+      "var el=document.getElementById(id); if(el){el.click();}});"
+    ))
+  ),
+  # App-wide "Gene List Builder assistant": the chat lives in a left-hand
+  # sidebar available on every page. It starts CLOSED so it never blocks the
+  # workflow; users open it from the "Assistant" button in the navbar (which
+  # toggles it client-side). Its model / key controls sit in a collapsed
+  # section inside the dock (byok_chat_ui).
+  sidebar = bslib::sidebar(
+    id = "assistant_dock",
+    title = tagList(shiny::icon("robot"), " Assistant"),
+    position = "left",
+    open = "closed",
+    width = 600,
+    byok_chat_ui(
+      "chat",
+      title = NULL,
+      greeting = glb_chat_greeting,
+      height = "calc(100vh - 190px)"
+    )
+  ),
+  bslib::nav_panel("Build", builder_page),
+  bslib::nav_panel("About", about_page),
+  # Right-aligned navbar actions (nav_spacer pushes what follows to the right):
+  # an assistant toggle (opens/closes the chat sidebar via server.R) and a
+  # guided-demo launcher that prefills breast cancer and starts the tour.
+  bslib::nav_spacer(),
+  bslib::nav_item(
+    # Toggle the assistant sidebar CLIENT-SIDE by clicking its built-in
+    # collapse-toggle. A server-side sidebar_toggle would queue behind a running
+    # build (Shiny is single-threaded), so the panel would appear frozen; this
+    # opens instantly regardless of what the server is doing.
+    actionButton(
+      "toggle_assistant",
+      "Assistant",
+      icon = icon("comments"),
+      class = "btn-sm btn-outline-primary my-1",
+      onclick = paste0(
+        "document.querySelector(",
+        "\"button.collapse-toggle[aria-controls='assistant_dock']\"",
+        ")?.click()"
+      )
+    )
+  ),
+  bslib::nav_item(
+    actionButton(
+      "demo_tour",
+      "Demo",
+      icon = icon("circle-play"),
+      class = "btn-sm btn-primary my-1"
+    )
+  )
 )

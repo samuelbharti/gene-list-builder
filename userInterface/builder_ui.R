@@ -1,47 +1,75 @@
-# Builder page: sidebar controls + stepped result tabs ------------------------
+# Builder page: compact sidebar + a single vertical workflow -----------------
+#
+# Rendered as a nav_panel of the app-wide page_navbar (see ui.R), so this is a
+# bslib::layout_sidebar (not a page_*).
+#
+# Sidebar is kept SHORT so disease -> sources -> Build are all visible without
+# scrolling: the many ranking-weight controls live in a collapsed accordion
+# (they're optional - defaults work, and re-ranking is instant afterwards).
+#
+# Main area is a single vertical stack of cards (no tabs): 1 Sources -> 2 Ranked
+# -> 3 AI curation, with a slim Export toolbar at the very bottom. The `tour_*`
+# element ids are anchors targeted by the cicerone guided demo (R/tour.R).
 
-builder_page <- bslib::page_sidebar(
+builder_page <- bslib::layout_sidebar(
   sidebar = bslib::sidebar(
     width = 340,
-    title = "Build a gene list",
-    disease_search_ui("disease"),
-    tags$hr(),
-    source_select_ui("sources"),
-    tags$hr(),
-    ranking_controls_ui("controls"),
-    tags$hr(),
-    run_pipeline_ui("run")
+    class = "glb-build-sidebar",
+    div(id = "tour_disease", disease_search_ui("disease")),
+    div(id = "tour_sources", source_select_ui("sources")),
+    div(id = "tour_run", run_pipeline_ui("run")),
+    # Optional weights, collapsed so they don't push Build below the fold.
+    div(
+      id = "tour_weights",
+      bslib::accordion(
+        open = FALSE,
+        class = "mt-2",
+        bslib::accordion_panel(
+          "Ranking weights (optional)",
+          icon = shiny::icon("sliders"),
+          ranking_controls_ui("controls")
+        )
+      )
+    )
   ),
-  bslib::navset_card_tab(
-    id = "steps",
-    bslib::nav_panel(
-      "1. Sources",
+  div(
+    id = "tour_workflow",
+    class = "d-flex flex-column gap-3",
+    # Step 1: per-source status.
+    bslib::card(
+      bslib::card_header("1 · Data sources"),
       bslib::card_body(
         markdown(paste(
-          "Per-source status for the most recent run. Each source returns genes",
-          "in a common schema; failures degrade gracefully and the run continues."
+          "Per-source status for the most recent run. Each source returns",
+          "genes in a common schema; failures degrade gracefully and the run",
+          "continues."
         )),
-        source_status_ui("status")
+        div(id = "tour_status", source_status_ui("status"))
       )
     ),
-    bslib::nav_panel(
-      "2. Ranked",
+    # Step 2: ranked genes.
+    bslib::card(
+      bslib::card_header("2 · Ranked genes"),
       bslib::card_body(
         markdown(paste(
           "Genes ranked by weighted, source-normalized evidence with a",
           "multi-source coverage bonus. Tune the sidebar weights to re-rank",
           "instantly (no re-querying)."
         )),
-        results_table_ui("results")
+        div(id = "tour_results", results_table_ui("results"))
       )
     ),
-    bslib::nav_panel(
-      "3. AI curation",
-      bslib::card_body(curation_ui("curation"))
+    # Step 3: optional AI curation of the final panel.
+    bslib::card(
+      bslib::card_header("3 · AI curation"),
+      bslib::card_body(div(id = "tour_curation", curation_ui("curation")))
     ),
-    bslib::nav_panel(
-      "4. Export",
-      bslib::card_body(export_ui("export"))
+    # Export: a slim toolbar, not a card - download once you've built/curated.
+    div(
+      id = "tour_export",
+      class = "d-flex justify-content-end align-items-center gap-2 pe-1",
+      span(class = "text-muted small me-1", "Export:"),
+      export_ui("export")
     )
   )
 )
