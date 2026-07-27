@@ -159,7 +159,7 @@ curate_gene_list <- function(
   top_n = 30,
   model = Sys.getenv(
     "GLB_GEMINI_MODEL",
-    unset = "gemini-2.0-flash"
+    unset = "gemini-flash-lite-latest"
   ),
   chat_factory = NULL
 ) {
