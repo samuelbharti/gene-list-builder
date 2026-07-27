@@ -3,13 +3,19 @@
 
 export_ui <- function(id) {
   ns <- NS(id)
+  # Compact: just the two download links, small + outline, meant to sit in a
+  # slim toolbar row (see builder_ui.R) rather than a full card.
   tagList(
-    p(paste(
-      "Download the curated gene list (or the full ranked list if you have not",
-      "run AI curation yet) and a run report."
-    )),
-    downloadButton(ns("csv"), "Download gene list (CSV)"),
-    downloadButton(ns("report"), "Download report (Markdown)")
+    downloadButton(
+      ns("csv"),
+      "Gene list (CSV)",
+      class = "btn-outline-primary btn-sm"
+    ),
+    downloadButton(
+      ns("report"),
+      "Report (.md)",
+      class = "btn-outline-primary btn-sm"
+    )
   )
 }
 
