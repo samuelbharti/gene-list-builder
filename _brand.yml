@@ -1,18 +1,33 @@
 # Brand configuration: the app's colors, fonts, and logo in one place.
 # Consumed automatically by bslib via `bs_theme(brand = TRUE)` (see ui.R).
-# Edit these values to match your brand. Spec: https://posit-dev.github.io/brand-yml/
+# Spec: https://posit-dev.github.io/brand-yml/
+#
+# A clean, minimal light theme: neutral dark-grey text on a soft off-white
+# ground, white cards for hierarchy, and a single restrained dusty-blue accent
+# used only on interactive elements (buttons/links). The semantic colors are
+# muted so status cues read clearly without shouting. ui.R adds the matching
+# minimal Sass (white cards, hairline borders, themed scrollbar).
 
 meta:
-  name: My App
+  name: Gene List Builder
 
 color:
   palette:
-    blue: "#0066cc"
-    gray: "#5b6770"
+    paper: "#F7F7F5" # soft off-white background
+    ink: "#2B2E33" # neutral dark grey (text)
+    slate: "#6B7079" # muted grey (secondary)
+    blue: "#4E6E8E" # dusty blue - the single accent
+    green: "#5C8A6A" # muted success
+    amber: "#C98A3C" # muted warning
+    red: "#BE4B3F" # muted danger
+  foreground: ink
+  background: paper
   primary: blue
-  secondary: gray
-  foreground: "#1a1a1a"
-  background: "#ffffff"
+  secondary: slate
+  success: green
+  info: blue
+  warning: amber
+  danger: red
 
 typography:
   fonts:
