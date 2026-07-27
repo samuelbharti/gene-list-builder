@@ -46,11 +46,15 @@ disease_search_server <- function(id, resolve_fn = resolve_disease) {
         cand$id,
         paste0(cand$name, "  [", cand$id, "]")
       )
-      radioButtons(
+      # A single compact dropdown (auto-selected to the top match) rather than a
+      # stack of radio buttons, so resolving doesn't push the rest of the sidebar
+      # controls down. The best match is pre-selected, so usually no extra click.
+      selectInput(
         ns("choice"),
-        "Select the matching disease:",
+        "Matched disease",
         choices = choices,
-        selected = cand$id[1]
+        selected = cand$id[1],
+        width = "100%"
       )
     })
 
