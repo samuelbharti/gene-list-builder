@@ -2,31 +2,26 @@
 
 OT_GRAPHQL_URL <- "https://api.platform.opentargets.org/api/v4/graphql"
 
-# Execute a GraphQL query against the Open Targets Platform API. Returns the
-# parsed `data` list, or NULL on transport/GraphQL error (callers degrade to an
-# empty result rather than crash).
-ot_graphql <- function(query, variables = list(), timeout = 20) {
-  resp <- tryCatch(
-    httr2::request(OT_GRAPHQL_URL) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_body_json(list(query = query, variables = variables)) |>
-      httr2::req_perform(),
-    error = function(e) NULL
-  )
-  if (is.null(resp)) {
-    return(NULL)
-  }
+OT_SOURCE <- "Open Targets"
 
-  body <- tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
+# Execute a GraphQL query against the Open Targets Platform API. Returns the
+# full biohttp envelope, so callers that care about *why* a call failed can
+# tell a timeout from an empty result.
+ot_graphql_env <- function(query, variables = list(), timeout = 20) {
+  glb_graphql(
+    OT_GRAPHQL_URL,
+    query = query,
+    variables = variables,
+    source = OT_SOURCE,
+    timeout = timeout
   )
-  if (is.null(body) || !is.null(body$errors)) {
-    return(NULL)
-  }
-  body$data
+}
+
+# Backwards-compatible view: the parsed `data` list, or NULL on transport or
+# GraphQL error. Every existing caller and every test stub uses this shape, so
+# it stays. Prefer ot_graphql_env() where the failure reason matters.
+ot_graphql <- function(query, variables = list(), timeout = 20) {
+  glb_graphql_data(ot_graphql_env(query, variables, timeout))
 }
 
 OT_XREFS_QUERY <- "
