@@ -5,29 +5,8 @@
 # so we fetch the panel index and token-match the disease name client-side, then
 # pull the best-matching panel's green/amber genes.
 
-PANELAPP_BASE <- "https://panelapp.genomicsengland.co.uk/api/v1/"
-
 PANELAPP_CONFIDENCE <- c("3" = 1.0, "2" = 0.5, "1" = 0.25)
 PANELAPP_COLOR <- c("3" = "green", "2" = "amber", "1" = "red")
-
-# GET a PanelApp URL, returning parsed JSON (or NULL on error).
-panelapp_get <- function(url, timeout = 20) {
-  resp <- tryCatch(
-    httr2::request(url) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_perform(),
-    error = function(e) NULL
-  )
-  if (is.null(resp)) {
-    return(NULL)
-  }
-  tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
-  )
-}
 
 # Meaningful lowercase tokens of a disease/panel name (drops short + generic
 # words so "lung cancer" matches "Inherited lung cancer", not every panel).
@@ -59,21 +38,32 @@ panelapp_tokens <- function(text) {
   unique(words)
 }
 
-# Walk the paginated panel index (capped) into a flat list of panels.
-panelapp_collect_panels <- function(get_fn, max_pages = 8) {
-  url <- paste0(PANELAPP_BASE, "panels/?page_size=100")
-  panels <- list()
-  page <- 0
-  while (!is.null(url) && page < max_pages) {
-    data <- get_fn(url)
-    if (is.null(data)) {
-      break
-    }
-    panels <- c(panels, data$results %||% list())
-    url <- data$`next`
-    page <- page + 1
+# Fetch the panel index via bioclients and reshape it into the list-of-lists
+# that panelapp_best_panel() expects.
+#
+# The reshape is deliberate. The token-overlap + strict-majority heuristic below
+# decides the ENTIRE gene list for this source and has no bioclients
+# equivalent, so it is left untouched and fed the same shape as before rather
+# than rewritten against a tibble.
+#
+# NOTE: max_pages is passed explicitly. bioclients defaults to 6 where this app
+# has always used 8; relying on the default would silently shrink the searchable
+# index and could change which panel is selected.
+panelapp_collect_panels <- function(
+  index_fn = bioclients::panelapp_all_panels,
+  max_pages = 8
+) {
+  d <- glb_client_body(index_fn(max_pages = max_pages, page_size = 100))
+  if (is.null(d) || nrow(d) == 0) {
+    return(list())
   }
-  panels
+  lapply(seq_len(nrow(d)), function(i) {
+    list(
+      id = d$id[[i]],
+      name = d$name[[i]],
+      relevant_disorders = as.list(d$disorders[[i]] %||% character())
+    )
+  })
 }
 
 # Pick the panel whose name best matches the disease name, or NULL if no panel
@@ -108,7 +98,8 @@ panelapp_best_panel <- function(panels, disease_name) {
 fetch_panelapp <- function(
   disease,
   gene_symbols = NULL,
-  get_fn = panelapp_get,
+  index_fn = bioclients::panelapp_all_panels,
+  panel_fn = bioclients::panelapp_panel,
   max_pages = 8
 ) {
   disease_name <- disease$name %||% ""
@@ -116,45 +107,39 @@ fetch_panelapp <- function(
     return(empty_gene_table())
   }
 
-  panels <- panelapp_collect_panels(get_fn, max_pages = max_pages)
+  panels <- panelapp_collect_panels(index_fn, max_pages = max_pages)
   panel <- panelapp_best_panel(panels, disease_name)
   if (is.null(panel)) {
     return(empty_gene_table())
   }
 
-  detail <- get_fn(paste0(PANELAPP_BASE, "panels/", panel$id, "/"))
-  genes <- detail$genes %||% list()
-  if (length(genes) == 0) {
+  d <- glb_client_body(panel_fn(panel$id))
+  if (is.null(d) || nrow(d) == 0) {
     return(empty_gene_table())
   }
 
-  conf <- vapply(
-    genes,
-    function(g) as.character(g$confidence_level %||% NA),
-    character(1)
-  )
-  keep <- conf %in% c("3", "2") # green + amber (diagnostic-grade) only
-  genes <- genes[keep]
-  conf <- conf[keep]
-  if (length(genes) == 0) {
+  # Green + amber only (diagnostic-grade). bioclients exposes a `level` string
+  # where the raw API used confidence_level "3"/"2"/"1"; red is excluded, as
+  # before. PANELAPP_CONFIDENCE is still keyed by the numeric confidence.
+  keep <- d$level %in% c("green", "amber")
+  d <- d[keep, , drop = FALSE]
+  if (nrow(d) == 0) {
     return(empty_gene_table())
   }
 
   df <- data.frame(
-    gene_symbol = vapply(
-      genes,
-      function(g) g$entity_name %||% NA_character_,
-      character(1)
+    gene_symbol = as.character(d$symbol),
+    source_score_raw = unname(
+      PANELAPP_CONFIDENCE[as.character(d$confidence)]
     ),
-    source_score_raw = unname(PANELAPP_CONFIDENCE[conf]),
-    evidence_type = paste0("panelapp_", unname(PANELAPP_COLOR[conf])),
-    url = paste0(
-      "https://panelapp.genomicsengland.co.uk/panels/",
-      panel$id,
-      "/"
-    ),
+    evidence_type = paste0("panelapp_", d$level),
+    url = as.character(d$source_url),
     stringsAsFactors = FALSE
   )
+  df <- df[!is.na(df$source_score_raw), , drop = FALSE]
+  if (nrow(df) == 0) {
+    return(empty_gene_table())
+  }
 
   as_gene_table(df, "panelapp")
 }

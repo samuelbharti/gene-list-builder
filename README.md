@@ -45,25 +45,42 @@ writing one adapter that returns the canonical schema and calling
 ## Requirements
 
 - R (>= 4.3)
-- Packages (managed with `renv` recommended): `shiny`, `bslib`, `brand.yml`,
-  `dplyr`, `tibble`, `tidyr`, `rlang`, `DT`, `shinycssloaders`, `httr2`, `ellmer`.
+- Packages: `shiny`, `bslib`, `brand.yml`, `dplyr`, `tibble`, `tidyr`, `rlang`,
+  `DT`, `shinycssloaders`, `ellmer`, `shinyvalidate`, `cicerone`, `shinyjs`, plus
+  `biohttp`, `bioclients`, and `biobouncer` (HTTP transport, database clients,
+  and identifier validation).
 
 ## Installation
 
-### Option 1: Using renv (recommended)
+### Option 1: renv (reproducible)
+
+`renv.lock` pins every dependency, including the exact `biobouncer` version.
+That matters for reproducibility: `biobouncer` bundles the HGNC snapshot used
+for the `symbol_status` column, so the package version determines the result.
 
 ```r
 if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
 renv::restore()
 ```
 
-### Option 2: Manual package installation
+### Option 2: install directly
+
+`biohttp`, `bioclients`, and `biobouncer` are not on CRAN; they are served from
+an r-universe repo, so a single `install.packages()` call covers everything:
 
 ```r
-install.packages(c(
-  "shiny", "bslib", "brand.yml", "dplyr", "tibble", "tidyr",
-  "rlang", "DT", "shinycssloaders", "httr2", "ellmer"
-))
+install.packages(
+  c(
+    "shiny", "bslib", "brand.yml", "dplyr", "tibble", "tidyr",
+    "rlang", "DT", "shinycssloaders", "ellmer", "shinyvalidate",
+    "cicerone", "shinyjs",
+    "biohttp", "bioclients", "biobouncer"
+  ),
+  repos = c(
+    "https://samuelbharti.r-universe.dev",
+    "https://cloud.r-project.org"
+  )
+)
 ```
 
 ## Configuration (API keys)
@@ -74,13 +91,17 @@ fallback). To enable Gemini curation, copy `.Renviron.example` to `.Renviron`
 
 ```sh
 GEMINI_API_KEY=your-key-here
-# optional, defaults to gemini-2.0-flash
-GLB_GEMINI_MODEL=gemini-2.0-flash
+# optional, defaults to gemini-flash-lite-latest
+GLB_GEMINI_MODEL=gemini-flash-lite-latest
 ```
 
-Open Targets and DGIdb are public and need no credentials. API responses are
-cached under `data/cache/` (git-ignored); use the sidebar "Ignore cache" toggle
-to force a refresh.
+Open Targets and DGIdb are public and need no credentials.
+
+Caching happens in two tiers. Finished per-source gene tables are stored under
+`data/cache/` (git-ignored, override with `GLB_CACHE_DIR`), and the sidebar
+"Rebuild from source" toggle bypasses that tier. Underneath, `biohttp` also
+caches the HTTP responses themselves in memory for a short TTL, so that toggle
+does not guarantee a fresh network call; set `BIOHTTP_CACHE_TTL` to shorten it.
 
 ## How to run
 
@@ -120,6 +141,25 @@ sources only, so a constraint metric doesn't inflate the multi-source bonus.
 Genes present in only some sources are not zero-imputed; breadth of evidence is
 rewarded explicitly via the coverage factor. Weights and the multi-source bonus
 are tunable live in the sidebar and re-rank instantly without re-querying.
+
+## Symbol quality and alias merging
+
+The aggregated table carries a `symbol_status` column from `biobouncer`'s
+bundled (offline) HGNC snapshot: `valid`, `alias of <X>`, `microRNA (not HGNC)`,
+or `unknown`. It is diagnostic and never affects scoring.
+
+Sources sometimes name the same gene differently (`KMT2A` vs the legacy `MLL`),
+which splits one gene into two rows, halves its evidence and understates the
+multi-source coverage bonus. Setting `GLB_REPAIR_SYMBOLS=1` merges an alias
+onto its modern symbol, but **only when that modern symbol was already reported
+by another source in the same run**. That corroboration gate matters:
+`biobouncer::repair_id()` also suggests via a fuzzy match, and would otherwise
+turn `ORF1AB` into the unrelated `OR11A1`.
+
+It is off by default. On a real lung-cancer run (449 genes) the corpus was 427
+`valid`, 21 `microRNA`, and 1 alias with no corroborating source, so enabling it
+merged nothing. Open Targets and PanelApp already return HGNC-approved symbols.
+Check `symbol_status` on your own diseases before turning it on.
 
 ## Project structure
 

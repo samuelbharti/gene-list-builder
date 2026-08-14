@@ -2,6 +2,54 @@
 # Resolves a free-text disease name (or pasted ontology id) to candidate terms
 # and returns the selected disease as a reactive one-row list.
 
+# Ontology prefixes we let biobouncer check, mapped to its source names.
+#
+# Deliberately NOT the full DISEASE_ID_RX set. biobouncer's patterns want the
+# colon form, and two of the app's accepted prefixes do not line up:
+#   Orphanet:158673 -> biobouncer says FALSE (it expects a different form)
+#   OTAR:...        -> no matching biobouncer source
+# Validating those would reject input the resolver handles perfectly well, so
+# they pass through unchecked. This map holds only prefixes verified to agree.
+GLB_ID_SOURCES <- c(
+  mondo = "mondo",
+  efo = "efo",
+  hp = "hp",
+  doid = "doid",
+  ncit = "ncit",
+  go = "go"
+)
+
+# A shinyvalidate rule for the disease box. Returns NULL (valid) for anything
+# it should not judge: blanks, free text, and prefixes outside the map above.
+# It only ever rejects a string that LOOKS like an ontology id of a known
+# prefix but is malformed, turning a wasted network round-trip and an empty
+# candidate list into instant inline feedback.
+glb_disease_id_rule <- function(value) {
+  value <- trimws(value %||% "")
+  if (!nzchar(value) || !is_disease_id(value)) {
+    return(NULL)
+  }
+  prefix <- tolower(sub("[:_].*$", "", value))
+  # Single-bracket + is.na, not [[: `[[` on a named vector RAISES for a name
+  # that is not present, which would crash the validator on any unmapped
+  # prefix (e.g. a pasted Orphanet id) instead of passing it through.
+  db <- unname(GLB_ID_SOURCES[prefix])
+  if (is.na(db) || !requireNamespace("biobouncer", quietly = TRUE)) {
+    return(NULL)
+  }
+  # The app accepts EFO_0000305 and EFO:0000305 alike; biobouncer's patterns
+  # only accept the colon form, so normalise before delegating.
+  canonical <- sub("_", ":", value)
+  ok <- tryCatch(
+    biobouncer::is_valid_id(canonical, db, how = "pattern"),
+    error = function(e) TRUE
+  )
+  if (isTRUE(ok)) {
+    return(NULL)
+  }
+  paste0("Not a well-formed ", toupper(prefix), " id.")
+}
+
 disease_search_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -23,6 +71,15 @@ disease_search_ui <- function(id) {
 disease_search_server <- function(id, resolve_fn = resolve_disease) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    # Inline validation for pasted ontology ids, so a typo shows up
+    # immediately instead of costing a network round-trip that returns an
+    # empty candidate list. Free text is untouched.
+    if (requireNamespace("shinyvalidate", quietly = TRUE)) {
+      iv <- shinyvalidate::InputValidator$new()
+      iv$add_rule("term", glb_disease_id_rule)
+      iv$enable()
+    }
 
     candidates <- eventReactive(input$resolve, {
       validate(need(

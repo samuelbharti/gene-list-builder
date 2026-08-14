@@ -13,7 +13,10 @@
 
 builder_page <- bslib::layout_sidebar(
   sidebar = bslib::sidebar(
-    width = 340,
+    # Wider than the bslib default: the disease dropdown shows a full term plus
+    # its ontology id, and the source checkbox labels are long enough to wrap
+    # awkwardly at 340.
+    width = 420,
     class = "glb-build-sidebar",
     div(id = "tour_disease", disease_search_ui("disease")),
     div(id = "tour_sources", source_select_ui("sources")),
@@ -35,6 +38,33 @@ builder_page <- bslib::layout_sidebar(
   div(
     id = "tour_workflow",
     class = "d-flex flex-column gap-3",
+    # Orientation card. A first-time user landing here saw three numbered
+    # steps with no statement of what the tool actually produces, so this says
+    # it plainly before the workflow starts.
+    bslib::card(
+      class = "glb-intro",
+      bslib::card_body(
+        class = "py-3",
+        tags$h5(class = "mb-2", "Build a ranked gene list for a disease"),
+        markdown(paste(
+          "Name a disease and this resolves it to an ontology term, queries",
+          "several gene-disease association databases at once, merges the",
+          "answers into one row per gene, and ranks them by weight of",
+          "evidence and how many independent sources agree. It replaces",
+          "hand-querying one database at a time."
+        )),
+        tags$p(
+          class = "small mb-0",
+          tags$strong("Evidence sources"),
+          " (Open Targets, PanelApp, DISEASES, ClinVar, DGIdb) add candidate",
+          " genes and count toward the multi-source bonus. ",
+          tags$strong("Annotation sources"),
+          " (gnomAD constraint, Pharos druggability) only adjust the score,",
+          " so nothing looks well-supported on constraint alone. Start on the",
+          " left with a disease name."
+        )
+      )
+    ),
     # Step 1: per-source status.
     bslib::card(
       bslib::card_header("1 · Data sources"),

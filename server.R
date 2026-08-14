@@ -147,8 +147,14 @@ function(input, output, session) {
         rows <- apply(tbl, 1, function(x) paste(trimws(x), collapse = " | "))
         paste0(
           header,
-          "Top ", top_n, " of ", nrow(r), " ranked genes ",
-          "(columns: ", paste(cols, collapse = ", "), "):\n",
+          "Top ",
+          top_n,
+          " of ",
+          nrow(r),
+          " ranked genes ",
+          "(columns: ",
+          paste(cols, collapse = ", "),
+          "):\n",
           paste(rows, collapse = "\n")
         )
       },
@@ -175,7 +181,9 @@ function(input, output, session) {
         updateTextInput(session, "disease-term", value = disease)
         session$sendCustomMessage("glb_click", "disease-resolve")
         paste0(
-          "Entered '", disease, "' and started resolving; the best-matching ",
+          "Entered '",
+          disease,
+          "' and started resolving; the best-matching ",
           "ontology term is auto-selected. Call get_app_state shortly to ",
           "confirm the resolved disease."
         )
@@ -238,7 +246,8 @@ function(input, output, session) {
           return("Pass coverage_bonus (0-1) and/or target_size to change.")
         }
         paste0(
-          "Updated ranking (", paste(msgs, collapse = ", "),
+          "Updated ranking (",
+          paste(msgs, collapse = ", "),
           "); re-ranks instantly, no re-querying."
         )
       },
@@ -273,8 +282,11 @@ function(input, output, session) {
         }
         session$sendCustomMessage("glb_click", "run-run")
         paste0(
-          "Started building the gene list for ", d$name, " from ",
-          length(srcs), " source(s). This queries the network; call ",
+          "Started building the gene list for ",
+          d$name,
+          " from ",
+          length(srcs),
+          " source(s). This queries the network; call ",
           "get_ranked_genes shortly to read the results."
         )
       },

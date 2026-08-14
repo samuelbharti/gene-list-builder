@@ -19,35 +19,57 @@ query Genes($names: [String!]!) {
 }"
 
 dgidb_graphql <- function(query, variables = list(), timeout = 20) {
-  resp <- tryCatch(
-    httr2::request(DGIDB_GRAPHQL_URL) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_body_json(list(query = query, variables = variables)) |>
-      httr2::req_perform(),
-    error = function(e) NULL
+  glb_graphql_data(dgidb_graphql_env(query, variables, timeout))
+}
+
+# Envelope-returning form, for callers that need the failure reason.
+dgidb_graphql_env <- function(query, variables = list(), timeout = 20) {
+  glb_graphql(
+    DGIDB_GRAPHQL_URL,
+    query = query,
+    variables = variables,
+    source = "DGIdb",
+    timeout = timeout
   )
-  if (is.null(resp)) {
-    return(NULL)
-  }
-  body <- tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
-  )
-  if (is.null(body) || !is.null(body$errors)) {
-    return(NULL)
-  }
-  body$data
 }
 
 # `gene_symbols` is the union of symbols found by disease-driven sources.
 # Returns a canonical gene tibble scored by drug-interaction count.
+# Map a bioclients dgidb tibble onto canonical columns. Pure, so it is testable
+# without any transport. bioclients returns one row per INPUT symbol, using NA
+# for genes DGIdb has never heard of and 0 for known genes with no
+# interactions; the original hand-rolled adapter dropped both, so both are
+# filtered here to keep scoring identical.
+dgidb_rows <- function(d) {
+  if (is.null(d) || nrow(d) == 0) {
+    return(NULL)
+  }
+  keep <- !is.na(d$interaction_count) & d$interaction_count > 0
+  d <- d[keep, , drop = FALSE]
+  if (nrow(d) == 0) {
+    return(NULL)
+  }
+  data.frame(
+    gene_symbol = d$symbol,
+    source_score_raw = as.numeric(d$interaction_count),
+    n_evidence = as.integer(d$interaction_count),
+    evidence_type = "drug_interaction",
+    url = d$source_url,
+    stringsAsFactors = FALSE
+  )
+}
+
+# `client_fn` takes a character vector of symbols and returns a biohttp
+# envelope wrapping the tibble above. Injectable for offline tests.
+#
+# Chunking is kept at the app's original 100. bioclients::dgidb_genes() sends
+# every symbol in a single request, which with a 200-gene Open Targets seed
+# would be one very large GraphQL query.
 fetch_dgidb <- function(
   disease = NULL,
   gene_symbols = NULL,
   chunk_size = 100,
-  graphql_fn = dgidb_graphql
+  client_fn = bioclients::dgidb_genes
 ) {
   gene_symbols <- unique(toupper(trimws(gene_symbols %||% character())))
   gene_symbols <- gene_symbols[nzchar(gene_symbols)]
@@ -60,48 +82,13 @@ fetch_dgidb <- function(
     ceiling(seq_along(gene_symbols) / chunk_size)
   )
 
-  nodes <- list()
-  for (chunk in chunks) {
-    data <- graphql_fn(DGIDB_GENES_QUERY, list(names = as.list(chunk)))
-    nodes <- c(nodes, data$genes$nodes %||% list())
-  }
-  if (length(nodes) == 0) {
+  parts <- lapply(chunks, function(chunk) {
+    dgidb_rows(glb_client_body(client_fn(chunk)))
+  })
+  df <- do.call(rbind, parts[!vapply(parts, is.null, logical(1))])
+  if (is.null(df) || nrow(df) == 0) {
     return(empty_gene_table())
   }
-
-  n_interactions <- vapply(
-    nodes,
-    function(n) length(n$interactions %||% list()),
-    integer(1)
-  )
-  keep <- n_interactions > 0
-  nodes <- nodes[keep]
-  n_interactions <- n_interactions[keep]
-  if (length(nodes) == 0) {
-    return(empty_gene_table())
-  }
-
-  concept <- vapply(
-    nodes,
-    function(n) n$conceptId %||% NA_character_,
-    character(1)
-  )
-  df <- data.frame(
-    gene_symbol = vapply(
-      nodes,
-      function(n) n$name %||% NA_character_,
-      character(1)
-    ),
-    source_score_raw = as.numeric(n_interactions),
-    n_evidence = n_interactions,
-    evidence_type = "drug_interaction",
-    url = ifelse(
-      is.na(concept),
-      NA_character_,
-      paste0("https://dgidb.org/genes/", concept)
-    ),
-    stringsAsFactors = FALSE
-  )
 
   as_gene_table(df, "dgidb")
 }

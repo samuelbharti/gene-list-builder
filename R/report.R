@@ -64,7 +64,15 @@ build_report_md <- function(
           "- **",
           status$label[i],
           "**: ",
-          if (isTRUE(status$ok[i])) "ok" else "error",
+          # Print the real status so an exported report distinguishes a source
+          # that found nothing from one that failed or timed out.
+          if ("status" %in% names(status)) {
+            status$status[i]
+          } else if (isTRUE(status$ok[i])) {
+            "ok"
+          } else {
+            "error"
+          },
           ", ",
           status$n_genes[i],
           " genes (",

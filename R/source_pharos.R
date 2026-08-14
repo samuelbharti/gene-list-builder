@@ -21,29 +21,25 @@ query Targets($syms: [String!]) {
 
 # POST a GraphQL query to Pharos; returns parsed `data` or NULL on error.
 pharos_graphql <- function(query, variables = list(), timeout = 30) {
-  resp <- tryCatch(
-    httr2::request(PHAROS_URL) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_body_json(list(query = query, variables = variables)) |>
-      httr2::req_perform(),
-    error = function(e) NULL
+  glb_graphql_data(pharos_graphql_env(query, variables, timeout))
+}
+
+# Envelope-returning form. Like gnomAD, this now checks the GraphQL `errors`
+# payload that the previous hand-rolled version ignored.
+pharos_graphql_env <- function(query, variables = list(), timeout = 30) {
+  glb_graphql(
+    PHAROS_URL,
+    query = query,
+    variables = variables,
+    source = "Pharos",
+    timeout = timeout
   )
-  if (is.null(resp)) {
-    return(NULL)
-  }
-  body <- tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
-  )
-  body$data
 }
 
 fetch_pharos <- function(
   disease = NULL,
   gene_symbols = NULL,
-  graphql_fn = pharos_graphql
+  client_fn = bioclients::pharos_targets
 ) {
   symbols <- unique(toupper(trimws(gene_symbols %||% character())))
   symbols <- symbols[nzchar(symbols)]
@@ -51,28 +47,34 @@ fetch_pharos <- function(
     return(empty_gene_table())
   }
 
-  data <- graphql_fn(PHAROS_TARGETS_QUERY, list(syms = as.list(symbols)))
-  targets <- data$targets$targets
-  if (is.null(targets) || length(targets) == 0) {
+  df <- pharos_rows(glb_client_body(client_fn(symbols)))
+  if (is.null(df) || nrow(df) == 0) {
     return(empty_gene_table())
   }
-
-  tdl <- vapply(targets, function(t) as.character(t$tdl %||% NA), character(1))
-  df <- data.frame(
-    gene_symbol = vapply(
-      targets,
-      function(t) as.character(t$sym %||% NA),
-      character(1)
-    ),
-    source_score_raw = unname(PHAROS_TDL_SCORE[tdl]),
-    evidence_type = paste0("pharos_", tolower(tdl)),
-    stringsAsFactors = FALSE
-  )
-  df <- df[!is.na(df$source_score_raw), , drop = FALSE]
-  if (nrow(df) == 0) {
-    return(empty_gene_table())
-  }
-  df$url <- paste0("https://pharos.nih.gov/targets/", df$gene_symbol)
 
   as_gene_table(df, "pharos")
+}
+
+# Map a bioclients pharos tibble onto canonical columns. Pure.
+#
+# bioclients returns one row per INPUT symbol with `tdl` NA both for symbols
+# Pharos does not know and for any level outside PHAROS_TDL_LEVELS. Rows
+# without a score are dropped, matching the previous behaviour, which relied on
+# PHAROS_TDL_SCORE[tdl] producing NA for the same cases.
+pharos_rows <- function(d) {
+  if (is.null(d) || nrow(d) == 0) {
+    return(NULL)
+  }
+  score <- unname(PHAROS_TDL_SCORE[d$tdl])
+  keep <- !is.na(score)
+  if (!any(keep)) {
+    return(NULL)
+  }
+  data.frame(
+    gene_symbol = d$symbol[keep],
+    source_score_raw = score[keep],
+    evidence_type = paste0("pharos_", tolower(d$tdl[keep])),
+    url = paste0("https://pharos.nih.gov/targets/", d$symbol[keep]),
+    stringsAsFactors = FALSE
+  )
 }

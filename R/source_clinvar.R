@@ -9,6 +9,19 @@ EUTILS_BASE <- "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 # GET an E-utilities endpoint as JSON, adding tool/email/api_key params and a
 # throttle that respects NCBI's rate limits (3/s without a key, 10/s with one).
 eutils_get <- function(endpoint, query, timeout = 20) {
+  biohttp::body_or_null(eutils_get_env(endpoint, query, timeout))
+}
+
+# Envelope-returning form.
+#
+# The API key now rides in `secret_query` rather than the visible query string.
+# biohttp applies it at dispatch only, so it stays out of the response-cache key
+# and is redacted from any error text. Previously it was interpolated into the
+# URL, where it would land in both.
+#
+# Throttle preserves NCBI's documented limits and the app's previous rates:
+# 9/s with a key, 2.5/s without (5 tokens per 2s).
+eutils_get_env <- function(endpoint, query, timeout = 20) {
   key <- Sys.getenv("ENTREZ_KEY")
   email <- Sys.getenv("ENTREZ_EMAIL")
   query <- c(
@@ -18,26 +31,19 @@ eutils_get <- function(endpoint, query, timeout = 20) {
   if (nzchar(email)) {
     query$email <- email
   }
-  if (nzchar(key)) {
-    query$api_key <- key
-  }
 
-  resp <- tryCatch(
-    httr2::request(paste0(EUTILS_BASE, endpoint)) |>
-      httr2::req_url_query(!!!query) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_throttle(rate = if (nzchar(key)) 9 else 2.5) |>
-      httr2::req_perform(),
-    error = function(e) NULL
-  )
-  if (is.null(resp)) {
-    return(NULL)
-  }
-  tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
+  glb_get(
+    EUTILS_BASE,
+    path = endpoint,
+    query = query,
+    source = "ClinVar",
+    timeout = timeout,
+    throttle = if (nzchar(key)) {
+      list(capacity = 9, fill_time_s = 1, realm = "ncbi")
+    } else {
+      list(capacity = 5, fill_time_s = 2, realm = "ncbi")
+    },
+    secret_query = if (nzchar(key)) list(api_key = key) else NULL
   )
 }
 

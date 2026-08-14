@@ -1,12 +1,27 @@
 # Installation
 
-## Recommended: renv
+## Install the dependencies
 
-1. Install `renv` if needed.
-2. Run `renv::restore()` in the project root.
-3. Start the app with `shiny::runApp()`.
+`biohttp`, `bioclients`, and `biobouncer` are not on CRAN. They are published to
+an r-universe repo, which behaves like an ordinary CRAN mirror, so one call
+installs everything:
 
-If you are using Docker, keep `renv.lock` and the `renv/` directory in the project root so the image can restore the project library from the lockfile.
+```r
+install.packages(
+  c("shiny", "bslib", "brand.yml", "dplyr", "tibble", "tidyr", "rlang", "DT",
+    "shinycssloaders", "ellmer", "shinyvalidate", "cicerone", "shinyjs",
+    "biohttp", "bioclients", "biobouncer"),
+  repos = c("https://samuelbharti.r-universe.dev", "https://cloud.r-project.org")
+)
+```
+
+Then start the app with `shiny::runApp()`.
+
+> **Note:** this project has no `renv.lock` yet. Earlier docs told you to run
+> `renv::restore()`, which could never have worked. Adding a lockfile is
+> worthwhile (it would pin the biobouncer version, which determines the bundled
+> HGNC snapshot and therefore affects reproducibility of scores), but it has not
+> been done. The Docker image already handles both cases.
 
 ### Quick-start helper
 

@@ -7,7 +7,18 @@
 run_pipeline_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    checkboxInput(ns("force"), "Ignore cache (force refresh)", value = FALSE),
+    # Deliberately NOT called "force refresh" any more. There are two cache
+    # tiers: this toggle bypasses the app's on-disk tier (saved gene tables,
+    # R/cache.R), but biohttp also holds a short-lived in-memory tier for the
+    # HTTP responses themselves, so ticking this does not guarantee a fresh
+    # network call. Claiming otherwise would be a lie in the UI. Clearing
+    # biohttp's tier here is not an option: cache_reset() is process-global, so
+    # on a shared server one user would empty it for every other session.
+    checkboxInput(
+      ns("force"),
+      "Rebuild from source (ignore saved results)",
+      value = FALSE
+    ),
     actionButton(
       ns("run"),
       "Build gene list",
