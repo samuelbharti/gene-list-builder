@@ -10,23 +10,19 @@ GNOMAD_URL <- "https://gnomad.broadinstitute.org/api"
 
 # POST a GraphQL query to gnomAD; returns parsed `data` or NULL on error.
 gnomad_graphql <- function(query, timeout = 30) {
-  resp <- tryCatch(
-    httr2::request(GNOMAD_URL) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_body_json(list(query = query)) |>
-      httr2::req_perform(),
-    error = function(e) NULL
+  glb_graphql_data(gnomad_graphql_env(query, timeout))
+}
+
+# Envelope-returning form. Note this now checks the GraphQL `errors` payload,
+# which the previous hand-rolled version did not: it returned body$data
+# unconditionally, so a query error looked like an empty result.
+gnomad_graphql_env <- function(query, timeout = 30) {
+  glb_graphql(
+    GNOMAD_URL,
+    query = query,
+    source = "gnomAD",
+    timeout = timeout
   )
-  if (is.null(resp)) {
-    return(NULL)
-  }
-  body <- tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
-  )
-  body$data
 }
 
 fetch_gnomad <- function(

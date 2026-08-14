@@ -51,21 +51,12 @@ glb_diseases_channel <- function(
 
 # GET a DISEASES URL, returning parsed JSON (or NULL on error).
 diseases_get <- function(url, timeout = 20) {
-  resp <- tryCatch(
-    httr2::request(url) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_perform(),
-    error = function(e) NULL
-  )
-  if (is.null(resp)) {
-    return(NULL)
-  }
-  tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
-  )
+  biohttp::body_or_null(diseases_get_env(url, timeout))
+}
+
+# Envelope-returning form.
+diseases_get_env <- function(url, timeout = 20) {
+  glb_get(url, source = "DISEASES", timeout = timeout)
 }
 
 fetch_diseases <- function(

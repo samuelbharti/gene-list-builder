@@ -19,26 +19,18 @@ query Genes($names: [String!]!) {
 }"
 
 dgidb_graphql <- function(query, variables = list(), timeout = 20) {
-  resp <- tryCatch(
-    httr2::request(DGIDB_GRAPHQL_URL) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_body_json(list(query = query, variables = variables)) |>
-      httr2::req_perform(),
-    error = function(e) NULL
+  glb_graphql_data(dgidb_graphql_env(query, variables, timeout))
+}
+
+# Envelope-returning form, for callers that need the failure reason.
+dgidb_graphql_env <- function(query, variables = list(), timeout = 20) {
+  glb_graphql(
+    DGIDB_GRAPHQL_URL,
+    query = query,
+    variables = variables,
+    source = "DGIdb",
+    timeout = timeout
   )
-  if (is.null(resp)) {
-    return(NULL)
-  }
-  body <- tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
-  )
-  if (is.null(body) || !is.null(body$errors)) {
-    return(NULL)
-  }
-  body$data
 }
 
 # `gene_symbols` is the union of symbols found by disease-driven sources.

@@ -21,23 +21,19 @@ query Targets($syms: [String!]) {
 
 # POST a GraphQL query to Pharos; returns parsed `data` or NULL on error.
 pharos_graphql <- function(query, variables = list(), timeout = 30) {
-  resp <- tryCatch(
-    httr2::request(PHAROS_URL) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_body_json(list(query = query, variables = variables)) |>
-      httr2::req_perform(),
-    error = function(e) NULL
+  glb_graphql_data(pharos_graphql_env(query, variables, timeout))
+}
+
+# Envelope-returning form. Like gnomAD, this now checks the GraphQL `errors`
+# payload that the previous hand-rolled version ignored.
+pharos_graphql_env <- function(query, variables = list(), timeout = 30) {
+  glb_graphql(
+    PHAROS_URL,
+    query = query,
+    variables = variables,
+    source = "Pharos",
+    timeout = timeout
   )
-  if (is.null(resp)) {
-    return(NULL)
-  }
-  body <- tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
-  )
-  body$data
 }
 
 fetch_pharos <- function(

@@ -12,21 +12,14 @@ PANELAPP_COLOR <- c("3" = "green", "2" = "amber", "1" = "red")
 
 # GET a PanelApp URL, returning parsed JSON (or NULL on error).
 panelapp_get <- function(url, timeout = 20) {
-  resp <- tryCatch(
-    httr2::request(url) |>
-      httr2::req_user_agent("gene-list-builder") |>
-      httr2::req_timeout(timeout) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_perform(),
-    error = function(e) NULL
-  )
-  if (is.null(resp)) {
-    return(NULL)
-  }
-  tryCatch(
-    httr2::resp_body_json(resp, simplifyVector = FALSE),
-    error = function(e) NULL
-  )
+  biohttp::body_or_null(panelapp_get_env(url, timeout))
+}
+
+# Envelope-returning form. PanelApp has no server-side filter, so the index
+# walk can fire several sequential page requests; biohttp's per-host throttle
+# and circuit breaker now cover that loop, which was previously unthrottled.
+panelapp_get_env <- function(url, timeout = 20) {
+  glb_get(url, source = "PanelApp", timeout = timeout)
 }
 
 # Meaningful lowercase tokens of a disease/panel name (drops short + generic
