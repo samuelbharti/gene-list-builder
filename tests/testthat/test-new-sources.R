@@ -1,50 +1,71 @@
 # Tests for the additional source adapters, with all network calls injected.
 
 test_that("fetch_panelapp() matches a panel and maps confidence, dropping red", {
-  get_fn <- function(url) {
-    if (grepl("panels/\\?", url)) {
-      list(
-        results = list(
-          list(
-            id = 1,
-            name = "Long QT syndrome",
-            relevant_disorders = list("R1")
-          ),
-          list(id = 2, name = "Cystic fibrosis", relevant_disorders = list())
-        ),
-        `next` = NULL
-      )
-    } else if (grepl("panels/1/", url)) {
-      list(
-        genes = list(
-          list(entity_name = "KCNQ1", confidence_level = "3"),
-          list(entity_name = "KCNH2", confidence_level = "2"),
-          list(entity_name = "LOWCONF", confidence_level = "1")
-        )
-      )
-    } else {
-      NULL
-    }
+  index_fn <- function(max_pages, page_size, ...) {
+    biohttp::status_ok(
+      tibble::tibble(
+        id = c(1L, 2L),
+        name = c("Long QT syndrome", "Cystic fibrosis"),
+        version = c("1.0", "1.0"),
+        disorders = list(list("R1"), list()),
+        source_url = c("https://p/1/", "https://p/2/")
+      ),
+      source = "PanelApp"
+    )
   }
-  gt <- fetch_panelapp(list(name = "long QT syndrome"), get_fn = get_fn)
+  panel_fn <- function(panel_id, ...) {
+    expect_equal(panel_id, 1L)
+    biohttp::status_ok(
+      tibble::tibble(
+        symbol = c("KCNQ1", "KCNH2", "LOWCONF"),
+        confidence = c(3L, 2L, 1L),
+        level = c("green", "amber", "red"),
+        hgnc_id = c("HGNC:1", "HGNC:2", "HGNC:3"),
+        source_url = rep("https://p/1/", 3)
+      ),
+      source = "PanelApp"
+    )
+  }
+  gt <- fetch_panelapp(
+    list(name = "long QT syndrome"),
+    index_fn = index_fn,
+    panel_fn = panel_fn
+  )
   expect_setequal(gt$gene_symbol, c("KCNQ1", "KCNH2")) # red dropped
   expect_equal(gt$source_score_raw[gt$gene_symbol == "KCNQ1"], 1.0)
   expect_equal(gt$source_score_raw[gt$gene_symbol == "KCNH2"], 0.5)
 })
 
 test_that("fetch_panelapp() returns empty when no panel matches", {
-  get_fn <- function(url) {
-    list(
-      results = list(
-        list(id = 9, name = "Cystic fibrosis", relevant_disorders = list())
+  index_fn <- function(max_pages, page_size, ...) {
+    biohttp::status_ok(
+      tibble::tibble(
+        id = 9L,
+        name = "Cystic fibrosis",
+        version = "1.0",
+        disorders = list(list()),
+        source_url = "https://p/9/"
       ),
-      `next` = NULL
+      source = "PanelApp"
     )
   }
   expect_equal(
-    nrow(fetch_panelapp(list(name = "zzz nomatch"), get_fn = get_fn)),
+    nrow(fetch_panelapp(list(name = "zzz nomatch"), index_fn = index_fn)),
     0
   )
+})
+
+test_that("panelapp_collect_panels() asks for 8 pages, not bioclients' 6", {
+  # bioclients defaults max_pages to 6 where this app has always used 8.
+  # Relying on the default would silently shrink the searchable index and
+  # could change which panel is selected.
+  asked <- NULL
+  index_fn <- function(max_pages, page_size, ...) {
+    asked <<- max_pages
+    biohttp::status_ok(tibble::tibble(), source = "PanelApp")
+  }
+  panelapp_collect_panels(index_fn)
+  expect_equal(asked, 8)
 })
 
 test_that("fetch_diseases() takes the max score per gene across channels", {
@@ -280,4 +301,50 @@ test_that("annotation sources score but do not inflate coverage", {
   r <- rank_genes(agg, coverage_bonus = 0.5, evidence_ids = "opentargets")
   expect_true(all(r$combined_score > 0))
   expect_equal(r$gene_symbol[1], "TP53") # constraint nudges TP53 to the top
+})
+
+# --- PanelApp panel selection ------------------------------------------------
+#
+# Characterisation tests written BEFORE the bioclients refactor. Which panel
+# gets picked determines the entire gene list for this source, and the matching
+# heuristic (token overlap + strict majority) has no bioclients equivalent, so
+# it must survive the migration byte for byte. These lock in the current
+# behaviour so a change in panel choice cannot slip through unnoticed.
+
+test_that("panelapp_tokens() drops short and generic words", {
+  expect_setequal(panelapp_tokens("Inherited lung cancer"), c("lung", "cancer"))
+  expect_setequal(panelapp_tokens("Long QT syndrome"), c("long"))
+  expect_length(panelapp_tokens(""), 0)
+  expect_length(panelapp_tokens(NULL), 0)
+})
+
+test_that("panelapp_best_panel() requires a strict majority of tokens", {
+  panels <- list(
+    list(name = "Familial breast cancer", relevant_disorders = list()),
+    list(name = "Childhood solid tumours", relevant_disorders = list()),
+    list(name = "Inherited lung cancer", relevant_disorders = list())
+  )
+  # "lung cancer" -> tokens lung, cancer; needs >= 2 matches.
+  expect_equal(
+    panelapp_best_panel(panels, "lung cancer")$name,
+    "Inherited lung cancer"
+  )
+
+  # A panel sharing only the broad token "cancer" is NOT good enough.
+  weak <- list(list(
+    name = "Familial breast cancer",
+    relevant_disorders = list()
+  ))
+  expect_null(panelapp_best_panel(weak, "lung cancer"))
+
+  expect_null(panelapp_best_panel(list(), "lung cancer"))
+  expect_null(panelapp_best_panel(panels, ""))
+})
+
+test_that("panelapp_best_panel() also matches on relevant_disorders", {
+  panels <- list(
+    list(name = "Panel A", relevant_disorders = list("Long QT")),
+    list(name = "Panel B", relevant_disorders = list())
+  )
+  expect_equal(panelapp_best_panel(panels, "long QT")$name, "Panel A")
 })
