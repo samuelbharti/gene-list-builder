@@ -20,48 +20,46 @@ query Assoc($efoId: String!, $size: Int!) {
 
 # `disease` is a one-row data frame / list with at least `id`. `gene_symbols` is
 # ignored (this is a disease-driven source). Returns a canonical gene tibble.
+# Map a bioclients opentargets tibble onto canonical columns. Pure.
+#
+# The `url` is built here rather than taken from bioclients' `source_url`, on
+# purpose. bioclients returns the per-evidence page
+# (/evidence/<ensembl>/<disease>) whereas this app has always exported the
+# target page (/target/<ensembl>). Those URLs go into the results table and the
+# CSV export, so switching would silently change user-facing output.
+ot_rows <- function(d) {
+  if (is.null(d) || nrow(d) == 0) {
+    return(NULL)
+  }
+  data.frame(
+    gene_symbol = d$symbol,
+    ensembl_id = d$ensembl_id,
+    source_score_raw = as.numeric(d$score),
+    evidence_type = "overall_association",
+    url = ifelse(
+      is.na(d$ensembl_id),
+      NA_character_,
+      paste0("https://platform.opentargets.org/target/", d$ensembl_id)
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
 fetch_opentargets <- function(
   disease,
   gene_symbols = NULL,
   limit = 200,
-  graphql_fn = ot_graphql
+  client_fn = bioclients::opentargets_disease_targets
 ) {
   efo <- disease$id %||% NULL
   if (is.null(efo) || !nzchar(efo)) {
     return(empty_gene_table())
   }
 
-  data <- graphql_fn(OT_ASSOC_QUERY, list(efoId = efo, size = limit))
-  rows <- data$disease$associatedTargets$rows
-  if (is.null(rows) || length(rows) == 0) {
+  df <- ot_rows(biohttp::body_or_null(client_fn(efo, size = limit)))
+  if (is.null(df) || nrow(df) == 0) {
     return(empty_gene_table())
   }
-
-  ensembl <- vapply(
-    rows,
-    function(r) r$target$id %||% NA_character_,
-    character(1)
-  )
-  df <- data.frame(
-    gene_symbol = vapply(
-      rows,
-      function(r) r$target$approvedSymbol %||% NA_character_,
-      character(1)
-    ),
-    ensembl_id = ensembl,
-    source_score_raw = vapply(
-      rows,
-      function(r) as.numeric(r$score %||% NA),
-      numeric(1)
-    ),
-    evidence_type = "overall_association",
-    url = ifelse(
-      is.na(ensembl),
-      NA_character_,
-      paste0("https://platform.opentargets.org/target/", ensembl)
-    ),
-    stringsAsFactors = FALSE
-  )
 
   as_gene_table(df, "opentargets")
 }

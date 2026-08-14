@@ -161,23 +161,34 @@ test_that("fetch_gnomad() filters unknown symbols before querying", {
 })
 
 test_that("fetch_pharos() maps TDL tiers to scores", {
-  graphql_fn <- function(query, variables) {
-    list(
-      targets = list(
-        targets = list(
-          list(sym = "EGFR", tdl = "Tclin"),
-          list(sym = "TP53", tdl = "Tchem"),
-          list(sym = "DARKGENE", tdl = "Tdark")
-        )
-      )
+  # bioclients returns one row per INPUT symbol, with tdl NA both for unknown
+  # symbols and for any level outside its allowed set. Those must be dropped.
+  client_fn <- function(symbols, ...) {
+    biohttp::status_ok(
+      tibble::tibble(
+        symbol = c("EGFR", "TP53", "DARKGENE", "UNKNOWN"),
+        tdl = c("Tclin", "Tchem", "Tdark", NA_character_),
+        source_url = rep("https://pharos.nih.gov/", 4)
+      ),
+      source = "Pharos"
     )
   }
   gt <- fetch_pharos(
-    gene_symbols = c("EGFR", "TP53", "DARKGENE"),
-    graphql_fn = graphql_fn
+    gene_symbols = c("EGFR", "TP53", "DARKGENE", "UNKNOWN"),
+    client_fn = client_fn
   )
   expect_equal(gt$source_score_raw[gt$gene_symbol == "EGFR"], 1.0)
   expect_equal(gt$source_score_raw[gt$gene_symbol == "DARKGENE"], 0.25)
+  expect_false("UNKNOWN" %in% gt$gene_symbol)
+})
+
+test_that("fetch_pharos() degrades to an empty table when the client fails", {
+  # Pharos was returning HTTP 502 while this was written, so this path is not
+  # hypothetical.
+  failing <- function(symbols, ...) biohttp::status_error(source = "Pharos")
+  gt <- fetch_pharos(gene_symbols = c("EGFR"), client_fn = failing)
+  expect_equal(nrow(gt), 0)
+  expect_true(validate_gene_table(gt))
 })
 
 test_that("annotation sources score but do not inflate coverage", {

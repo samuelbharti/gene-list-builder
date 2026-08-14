@@ -62,39 +62,35 @@ test_that("resolve_disease() returns empty on blank or no match", {
   expect_equal(nrow(resolve_disease("zzz", graphql_fn = empty)), 0)
 })
 
-test_that("fetch_opentargets() maps associated targets to the schema", {
-  fake <- function(query, variables = list(), ...) {
-    list(
-      disease = list(
-        id = "MONDO_1",
-        name = "x",
-        associatedTargets = list(
-          count = 2,
-          rows = list(
-            list(
-              score = 0.9,
-              target = list(id = "ENSG1", approvedSymbol = "TP53")
-            ),
-            list(
-              score = 0.7,
-              target = list(id = "ENSG2", approvedSymbol = "EGFR")
-            )
-          )
-        )
-      )
+test_that("fetch_opentargets() maps association scores to the schema", {
+  fake <- function(id, size, ...) {
+    biohttp::status_ok(
+      tibble::tibble(
+        symbol = c("TP53", "EGFR"),
+        ensembl_id = c("ENSG1", "ENSG2"),
+        score = c(0.9, 0.7),
+        source_url = c("https://x/evidence/1", "https://x/evidence/2")
+      ),
+      source = "Open Targets"
     )
   }
-  gt <- fetch_opentargets(list(id = "MONDO_1"), graphql_fn = fake)
+  gt <- fetch_opentargets(list(id = "MONDO_1"), client_fn = fake)
   expect_true(validate_gene_table(gt))
   expect_equal(gt$gene_symbol, c("TP53", "EGFR"))
   expect_equal(gt$source_score_raw, c(0.9, 0.7))
   expect_true(all(grepl("ENSG", gt$ensembl_id)))
+  # The exported URL stays the /target/ page, not bioclients' /evidence/ page,
+  # so the results table and CSV export are unchanged by the migration.
+  expect_true(all(grepl("/target/ENSG", gt$url)))
 })
 
 test_that("fetch_opentargets() degrades to empty on missing disease/id", {
   expect_equal(nrow(fetch_opentargets(list(id = ""))), 0)
-  null_fn <- function(...) NULL
-  expect_equal(nrow(fetch_opentargets(list(id = "X"), graphql_fn = null_fn)), 0)
+  failing <- function(id, size, ...) biohttp::status_error(source = "OT")
+  expect_equal(
+    nrow(fetch_opentargets(list(id = "X"), client_fn = failing)),
+    0
+  )
 })
 
 test_that("fetch_dgidb() scores genes by interaction count", {
