@@ -1,0 +1,47 @@
+# Files excluded from the deployment bundle (Posit Connect / Connect Cloud).
+#
+# rsconnect does NOT honour .gitignore, so anything that must not leave this
+# machine has to be listed HERE as well. Being git-ignored is not enough.
+
+# Secrets. Without these two lines a local deploy would upload the live
+# GEMINI_API_KEY inside the bundle. Set the variables in the Connect Cloud
+# dashboard instead (Gemini is optional; the app degrades to top-N-by-rank).
+.Renviron
+.Renviron.example
+
+# Cached API responses are excluded by data/.rscignore, NOT from here.
+# rsconnect reads .rscignore from each directory as it scans it, so entries in
+# this file only ever apply to root-level names. A nested path like
+# "data/cache" silently does nothing. See data/.rscignore.
+
+# Development-only trees.
+renv
+tests
+dev
+docs
+.github
+.Rproj.user
+rsconnect
+.git
+.claude
+plans
+skills
+scratchpad
+
+# Repo furniture the running app does not need.
+CHANGELOG.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+CITATION.cff
+CITATION.md
+Dockerfile
+.dockerignore
+.pre-commit-config.yaml
+.gitattributes
+.gitignore
+.Rbuildignore
+air.toml
+template.yml
+.lintr
+.markdownlint.json
+.markdownlintignore

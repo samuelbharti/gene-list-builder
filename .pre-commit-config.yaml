@@ -3,10 +3,11 @@
 # Run on everything:  pre-commit run --all-files
 # Docs: https://pre-commit.com / https://lorenzwalthert.github.io/precommit/
 
-# Generated/vendored paths that hooks should never touch. renv.lock is
-# generated and full of third-party package names (codespell reads "deSolve"
-# as a typo), so it is excluded rather than annotated.
-exclude: "^(renv/|renv\\.lock$|data/|docs/)"
+# Generated/vendored paths that hooks should never touch. renv.lock and
+# manifest.json are generated and full of third-party package names and author
+# surnames (codespell reads "deSolve" as a typo and "Hass" as "Hash"), so they
+# are excluded rather than annotated.
+exclude: "^(renv/|renv\\.lock$|manifest\\.json$|data/|docs/)"
 
 repos:
   # Block secrets (API keys, tokens) from ever entering a commit.
