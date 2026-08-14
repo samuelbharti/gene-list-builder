@@ -12,7 +12,7 @@
 1. Create a branch from `dev`.
 2. Add UI or server changes in the appropriate folders.
 3. Run the app locally.
-4. Restore dependencies with `renv::restore()` whenever package versions change.
+4. Reinstall dependencies (see docs/installation.md) when package versions change.
 
 ## Deployment
 

@@ -45,25 +45,29 @@ writing one adapter that returns the canonical schema and calling
 ## Requirements
 
 - R (>= 4.3)
-- Packages (managed with `renv` recommended): `shiny`, `bslib`, `brand.yml`,
-  `dplyr`, `tibble`, `tidyr`, `rlang`, `DT`, `shinycssloaders`, `httr2`, `ellmer`.
+- Packages: `shiny`, `bslib`, `brand.yml`, `dplyr`, `tibble`, `tidyr`, `rlang`,
+  `DT`, `shinycssloaders`, `ellmer`, `shinyvalidate`, `cicerone`, `shinyjs`, plus
+  `biohttp`, `bioclients`, and `biobouncer` (HTTP transport, database clients,
+  and identifier validation).
 
 ## Installation
 
-### Option 1: Using renv (recommended)
+`biohttp`, `bioclients`, and `biobouncer` are not on CRAN; they are served from
+an r-universe repo, so a single `install.packages()` call covers everything:
 
 ```r
-if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
-renv::restore()
-```
-
-### Option 2: Manual package installation
-
-```r
-install.packages(c(
-  "shiny", "bslib", "brand.yml", "dplyr", "tibble", "tidyr",
-  "rlang", "DT", "shinycssloaders", "httr2", "ellmer"
-))
+install.packages(
+  c(
+    "shiny", "bslib", "brand.yml", "dplyr", "tibble", "tidyr",
+    "rlang", "DT", "shinycssloaders", "ellmer", "shinyvalidate",
+    "cicerone", "shinyjs",
+    "biohttp", "bioclients", "biobouncer"
+  ),
+  repos = c(
+    "https://samuelbharti.r-universe.dev",
+    "https://cloud.r-project.org"
+  )
+)
 ```
 
 ## Configuration (API keys)
@@ -74,8 +78,8 @@ fallback). To enable Gemini curation, copy `.Renviron.example` to `.Renviron`
 
 ```sh
 GEMINI_API_KEY=your-key-here
-# optional, defaults to gemini-2.0-flash
-GLB_GEMINI_MODEL=gemini-2.0-flash
+# optional, defaults to gemini-flash-lite-latest
+GLB_GEMINI_MODEL=gemini-flash-lite-latest
 ```
 
 Open Targets and DGIdb are public and need no credentials. API responses are

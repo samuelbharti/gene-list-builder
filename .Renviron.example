@@ -8,9 +8,9 @@
 # GEMINI_API_KEY=replace-me
 #
 # Optional: override the Gemini model used for curation.
-# GLB_GEMINI_MODEL=gemini-2.0-flash
+# GLB_GEMINI_MODEL=gemini-flash-lite-latest
 #
-# Optional: NCBI E-utilities credentials (only needed once a ClinVar/NCBI Gene
-# source is added; raises the request rate limit). Not used by the v1 sources.
+# Optional: NCBI E-utilities credentials, used by the ClinVar source. No key is
+# required, but setting one raises the request rate limit from 2.5/s to 9/s.
 # ENTREZ_KEY=replace-me
 # ENTREZ_EMAIL=you@example.org
