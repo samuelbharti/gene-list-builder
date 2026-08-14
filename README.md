@@ -1,6 +1,6 @@
 # Gene List Builder
 
-A lightweight Shiny app for building a curated gene list for a disease — "GDA
+A lightweight Shiny app for building a curated gene list for a disease: "GDA
 (gene–disease association) for gene lists". It replaces the manual,
 API-by-hand curation workflow with a reproducible pipeline:
 
@@ -11,7 +11,7 @@ API-by-hand curation workflow with a reproducible pipeline:
 5. **Curate** the final list with an AI agent (Google Gemini), on demand.
 6. **Export** the gene list (CSV) and a run report (Markdown).
 
-Current app version: v0.1.0
+Current app version: v0.2.0
 
 ## Data sources
 
@@ -40,7 +40,7 @@ Sources are registered through an extensible registry (`R/source_registry.R`).
 Each entry declares `needs` (`disease` or `genes`) and `role` (`evidence` or
 `annotation`). Adding DisGeNET, OMIM, GWAS Catalog, or others is a matter of
 writing one adapter that returns the canonical schema and calling
-`register_source()` — no pipeline changes required.
+`register_source()`. No pipeline changes are required.
 
 ## Requirements
 
@@ -194,7 +194,7 @@ variable and skips when Chrome is unavailable.
 
 ## Theming
 
-Branding lives in [`_brand.yml`](_brand.yml) — colors, fonts, and logo in one
+Branding lives in [`_brand.yml`](_brand.yml): colors, fonts, and logo in one
 place, applied by bslib via `bs_theme(brand = TRUE)` in [ui.R](ui.R). See
 [docs/theming.md](docs/theming.md).
 
