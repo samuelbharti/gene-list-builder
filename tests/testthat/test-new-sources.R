@@ -105,19 +105,59 @@ test_that("fetch_clinvar() returns empty when no records match", {
 })
 
 test_that("fetch_gnomad() keeps genes with LOEUF and drops misses", {
-  graphql_fn <- function(query) {
-    list(
-      g1 = list(symbol = "TP53", gnomad_constraint = list(oe_lof_upper = 0.4)),
-      g2 = list(symbol = "BRCA1", gnomad_constraint = list(oe_lof_upper = 0.9)),
-      g3 = NULL
+  # bioclients returns one row per input symbol, with an all-NA row for a gene
+  # gnomAD does not constrain. Those must be dropped, not scored as NA.
+  client_fn <- function(symbols, ...) {
+    biohttp::status_ok(
+      tibble::tibble(
+        symbol = c("TP53", "BRCA1", "FAKE"),
+        pli = c(0.9, 0.8, NA_real_),
+        loeuf = c(0.4, 0.9, NA_real_)
+      ),
+      source = "gnomAD"
     )
   }
   gt <- fetch_gnomad(
     gene_symbols = c("TP53", "BRCA1", "FAKE"),
-    graphql_fn = graphql_fn
+    client_fn = client_fn
   )
   expect_setequal(gt$gene_symbol, c("TP53", "BRCA1"))
   expect_equal(gt$source_score_raw[gt$gene_symbol == "TP53"], 0.4)
+})
+
+test_that("fetch_gnomad() degrades to an empty table when the client fails", {
+  failing <- function(symbols, ...) biohttp::status_timeout(source = "gnomAD")
+  gt <- fetch_gnomad(gene_symbols = c("TP53"), client_fn = failing)
+  expect_equal(nrow(gt), 0)
+  expect_true(validate_gene_table(gt))
+})
+
+test_that("gnomad_known_symbols() drops symbols that would poison the batch", {
+  # gnomAD aliases genes into one GraphQL query, and a single unresolvable
+  # symbol nulls out the entire batch (verified live: c("TP53","ZZZNOTAGENE")
+  # returns NA for BOTH). Filtering unknown symbols first protects the rest.
+  expect_equal(
+    gnomad_known_symbols(c("EGFR", "ZZZNOTAGENE", "TP53")),
+    c("EGFR", "TP53")
+  )
+  expect_length(gnomad_known_symbols(character()), 0)
+})
+
+test_that("fetch_gnomad() filters unknown symbols before querying", {
+  asked <- NULL
+  client_fn <- function(symbols, ...) {
+    asked <<- symbols
+    biohttp::status_ok(
+      tibble::tibble(symbol = symbols, loeuf = rep(0.5, length(symbols))),
+      source = "gnomAD"
+    )
+  }
+  fetch_gnomad(
+    gene_symbols = c("TP53", "ZZZNOTAGENE", "BRAF"),
+    client_fn = client_fn
+  )
+  expect_false("ZZZNOTAGENE" %in% asked)
+  expect_setequal(asked, c("TP53", "BRAF"))
 })
 
 test_that("fetch_pharos() maps TDL tiers to scores", {
