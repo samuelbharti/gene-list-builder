@@ -4,7 +4,7 @@ Please cite this repository when using it in publications or derivative projects
 
 Recommended citation (APA):
 
-Bharti, S. (2026). Gene List Builder (version 0.2.0) [Software].
+Bharti, S. (2026). Gene List Builder (version 0.2.0) [Software]. Zenodo. <https://doi.org/10.5281/zenodo.21936036>
 
 BibTeX:
 
@@ -14,11 +14,14 @@ BibTeX:
   title = {Gene List Builder},
   version = {0.2.0},
   date = {2026-08-14},
-  url = {https://github.com/samuelbharti/gene-list-builder}
+  doi = {10.5281/zenodo.21936036},
+  url = {https://doi.org/10.5281/zenodo.21936036}
 }
 ```
 
 Notes:
 
-- A DOI will be added here once Zenodo archives this release and mints one.
+- This DOI is for v0.2.0 specifically. To cite the project generally (always
+  resolving to the latest version), use the concept DOI:
+  <https://doi.org/10.5281/zenodo.21936035>.
 - For automated citation support on GitHub, keep a `CITATION.cff` in the repository root.

@@ -1,5 +1,7 @@
 # Gene List Builder
 
+[![DOI](https://zenodo.org/badge/1285511579.svg)](https://doi.org/10.5281/zenodo.21936035)
+
 A lightweight Shiny app for building a curated gene list for a disease: "GDA
 (gene–disease association) for gene lists". It replaces the manual,
 API-by-hand curation workflow with a reproducible pipeline:

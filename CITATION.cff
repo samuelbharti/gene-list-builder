@@ -2,7 +2,7 @@ cff-version: 1.1.0
 message: "If you use this software, please cite it as below."
 title: "Gene List Builder"
 version: "0.2.0"
-# doi: set this to your project's DOI (e.g. 10.5281/zenodo.xxxxx)
+doi: "10.5281/zenodo.21936036"
 date-released: "2026-08-14"
 authors:
   - family-names: Bharti
