@@ -142,6 +142,25 @@ Genes present in only some sources are not zero-imputed; breadth of evidence is
 rewarded explicitly via the coverage factor. Weights and the multi-source bonus
 are tunable live in the sidebar and re-rank instantly without re-querying.
 
+## Symbol quality and alias merging
+
+The aggregated table carries a `symbol_status` column from `biobouncer`'s
+bundled (offline) HGNC snapshot: `valid`, `alias of <X>`, `microRNA (not HGNC)`,
+or `unknown`. It is diagnostic and never affects scoring.
+
+Sources sometimes name the same gene differently (`KMT2A` vs the legacy `MLL`),
+which splits one gene into two rows, halves its evidence and understates the
+multi-source coverage bonus. Setting `GLB_REPAIR_SYMBOLS=1` merges an alias
+onto its modern symbol, but **only when that modern symbol was already reported
+by another source in the same run**. That corroboration gate matters:
+`biobouncer::repair_id()` also suggests via a fuzzy match, and would otherwise
+turn `ORF1AB` into the unrelated `OR11A1`.
+
+It is off by default. On a real lung-cancer run (449 genes) the corpus was 427
+`valid`, 21 `microRNA`, and 1 alias with no corroborating source, so enabling it
+merged nothing. Open Targets and PanelApp already return HGNC-approved symbols.
+Check `symbol_status` on your own diseases before turning it on.
+
 ## Project structure
 
 ```txt

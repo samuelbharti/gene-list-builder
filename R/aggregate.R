@@ -34,7 +34,7 @@ symbol_status <- function(symbols) {
   if (is.null(info)) {
     return(rep(NA_character_, n))
   }
-  as.character(ifelse(
+  out <- as.character(ifelse(
     info$valid %in% TRUE,
     "valid",
     ifelse(
@@ -43,6 +43,13 @@ symbol_status <- function(symbols) {
       "unknown"
     )
   ))
+  # Mature microRNA names (hsa-mir-21-5p, hsa-let-7a-5p) arrive from the
+  # text-mined sources and are not HGNC gene symbols at all, so HGNC reports
+  # them as "unknown", which reads like a data error rather than a different
+  # kind of entity. Label them for what they are. biobouncer's mirbase source
+  # is not used here: its patterns expect MIMAT/MI accessions, not these names.
+  out[grepl("^HSA-(MIR|LET)-", toupper(symbols))] <- "microRNA (not HGNC)"
+  out
 }
 
 # Empty aggregated table (no score_* columns since no sources contributed).
@@ -71,12 +78,81 @@ normalize_source_scores <- function(raw, method = "rank") {
   }
 }
 
+# Merge legacy gene symbols onto their modern name, but ONLY when corroborated.
+#
+# The problem: aggregate_sources() dedupes on `gene_symbol` and as_gene_table()
+# only uppercases, so if Open Targets says KMT2A and another source says the
+# legacy MLL, they become two rows. The gene's evidence is split, n_sources is
+# understated, and the coverage bonus under-rewards exactly the multi-source
+# genes the ranking exists to surface.
+#
+# Why not just call repair_id(). Its suggestions come from an authoritative
+# retired/alias map AND a bounded fuzzy search, and report_id() does not say
+# which, so blanket repair also does this:
+#     ""      -> "AR"      invents a gene from an empty string
+#     ORF1AB  -> OR11A1    fuzzy guess, wrong
+#
+# The gate: accept a suggestion only when the suggested symbol was ALREADY
+# reported by some source in this same run. MLL -> KMT2A fires only because
+# another source really did report KMT2A. ORF1AB -> OR11A1 can never fire
+# unless a source genuinely reported OR11A1, in which case it is not a
+# hallucination anyway. That makes the fuzzy path unexploitable without
+# needing biobouncer to expose which route produced the suggestion.
+#
+# Off by default: this CHANGES combined_score, because merging rows raises
+# n_sources and therefore coverage_factor. Set GLB_REPAIR_SYMBOLS=1 to enable.
+repair_corroborated_symbols <- function(combined) {
+  if (!truthy(Sys.getenv("GLB_REPAIR_SYMBOLS"))) {
+    return(combined)
+  }
+  if (!requireNamespace("biobouncer", quietly = TRUE)) {
+    return(combined)
+  }
+  syms <- combined$gene_symbol
+  present <- unique(toupper(syms[!is.na(syms) & nzchar(syms)]))
+  if (length(present) == 0) {
+    return(combined)
+  }
+
+  info <- tryCatch(
+    biobouncer::report_id(present, "hgnc", how = "cache"),
+    error = function(e) NULL
+  )
+  if (is.null(info)) {
+    return(combined)
+  }
+
+  cand <- info[
+    !(info$valid %in% TRUE) & !is.na(info$suggestion),
+    ,
+    drop = FALSE
+  ]
+  if (nrow(cand) == 0) {
+    return(combined)
+  }
+  # The corroboration gate, and the reason this is safe.
+  target <- toupper(cand$suggestion)
+  keep <- nzchar(cand$input) &
+    target %in% present &
+    target != toupper(cand$input)
+  cand <- cand[keep, , drop = FALSE]
+  if (nrow(cand) == 0) {
+    return(combined)
+  }
+
+  map <- stats::setNames(toupper(cand$suggestion), toupper(cand$input))
+  hit <- !is.na(syms) & toupper(syms) %in% names(map)
+  combined$gene_symbol[hit] <- unname(map[toupper(syms[hit])])
+  combined
+}
+
 # `per_source`  - (named) list of canonical gene tibbles, one per source.
 # `norm_methods`- optional named character vector mapping source_id -> method.
-# `evidence_ids`- source ids that count as disease *evidence* (drive n_sources and
-#                 the coverage bonus). Sources not listed (e.g. gnomAD/Pharos
-#                 annotations) still contribute a score_<id> column but do not
-#                 inflate coverage. NULL means "treat every source as evidence".
+# `evidence_ids`- source ids that count as disease *evidence* (drive n_sources
+#                 and the coverage bonus). Sources not listed (e.g. gnomAD or
+#                 Pharos annotations) still contribute a score_<id> column but
+#                 do not inflate coverage. NULL means "every source is
+#                 evidence".
 #
 # Returns one row per gene with provenance columns plus a `score_<source_id>`
 # column (the normalized score, NA where the gene is absent from that source).
@@ -89,6 +165,8 @@ aggregate_sources <- function(
   if (nrow(combined) == 0) {
     return(empty_aggregated_table())
   }
+  # Must run BEFORE the group_by below, since it changes the dedupe key.
+  combined <- repair_corroborated_symbols(combined)
 
   # Per-source normalization of raw scores into 0..1.
   parts <- split(combined, combined$source_id)
