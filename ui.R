@@ -97,15 +97,37 @@
   .shiny-chat-greeting,
   .shiny-chat-greeting-content,
   .shiny-chat-greeting p { color: $brand-ink !important; }
-  .suggestion, .shiny-chat-suggestion-list-item {
+  /* The visible label is a CHILD div, not the .suggestion span itself, and it
+     carries its own camel colour: styling only the span left the text
+     unreadable while reporting the right colour on the parent. */
+  .suggestion, .shiny-chat-suggestion-list-item,
+  .shiny-chat-suggestion-list-item-body {
     background-color: $brand-card !important;
-    border: 1px solid $brand-border !important;
-    color: $brand-ink !important;
     border-radius: 0.5rem;
+    color: $brand-ink !important;
+  }
+  .suggestion, .shiny-chat-suggestion-list-item {
+    border: 1px solid $brand-border !important;
   }
   .suggestion:hover, .shiny-chat-suggestion-list-item:hover {
     background-color: mix($brand-rose, $brand-card, 30%) !important;
     border-color: $brand-crimson !important;
+  }
+  /* No visible scrollbar inside the chat. It still scrolls when a
+     conversation runs long; the bar itself is just hidden, because an
+     always-present track in a mostly-empty panel looked broken. The global
+     themed scrollbar rules below would otherwise apply here too. */
+  #assistant_dock .shiny-chat-messages,
+  #assistant_dock .shiny-chat-container,
+  #assistant_dock .shiny-chat-messages-wrapper {
+    scrollbar-width: none;
+  }
+  #assistant_dock .shiny-chat-messages::-webkit-scrollbar,
+  #assistant_dock .shiny-chat-container::-webkit-scrollbar,
+  #assistant_dock .shiny-chat-messages-wrapper::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
   }
 
   /* Gently rounded, tactile controls. Secondary stays a filled camel so the
@@ -113,10 +135,11 @@
   .btn { border-radius: 0.5rem; }
   .form-control, .form-select, .selectize-input { border-radius: 0.5rem; }
 
-  /* Navbar picks up a faint indigo wash so it separates from the cards below
-     instead of blending into one continuous sand field. */
+  /* Navbar sits on the same surface as the cards. It previously carried a
+     faint crimson wash to separate it, which just read as a different colour
+     from the rest of the app; the bottom hairline does that job on its own. */
   .navbar {
-    background-color: mix($brand-crimson, $brand-card, 7%) !important;
+    background-color: $brand-card !important;
     border-bottom: 1px solid $brand-border;
     box-shadow: none;
   }
@@ -251,6 +274,13 @@
      input sits near the top instead of below a big empty gap. */
   .glb-build-sidebar > .sidebar-content { padding-top: 0.5rem !important; }
   .glb-build-sidebar > .sidebar-content > div:first-child { margin-top: 0; }
+
+  /* Compact single-line footer. */
+  .glb-footer {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    background-color: $brand-card;
+  }
   "
 )
 
@@ -289,7 +319,11 @@ bslib::page_navbar(
       "chat",
       title = NULL,
       greeting = glb_chat_greeting,
-      height = "55vh"
+      # Fill the dock: the input box then sits at the BOTTOM rather than
+      # floating mid-panel with dead space under it. 55vh was too short and
+      # did exactly that. Offset covers the navbar, the "Model & key"
+      # accordion above the chat, and the footer.
+      height = "calc(100vh - 190px)"
     )
   ),
   bslib::nav_panel("Build", builder_page),
@@ -326,11 +360,13 @@ bslib::page_navbar(
   # Site-wide footer, matching the other apps in this family. The research-use
   # note is deliberate: this tool ranks candidate genes to inform panel design,
   # it does not make clinical calls.
+  # Kept to a single compact line: the research-use note runs inline rather
+  # than on its own row, which halves the footer height.
   footer = tags$footer(
-    class = "glb-footer border-top text-center text-muted small py-3 px-2",
+    class = "glb-footer border-top text-center text-muted py-1 px-2",
     sprintf("Gene List Builder v%s", app_version()),
     tags$span(class = "mx-1", "·"),
-    "Built by Samuel Bharti",
+    "Samuel Bharti",
     tags$span(class = "mx-1", "·"),
     tags$a(
       href = "https://github.com/samuelbharti/gene-list-builder",
@@ -346,13 +382,10 @@ bslib::page_navbar(
       ),
       target = "_blank",
       rel = "noopener",
-      "MIT License"
+      "MIT"
     ),
-    tags$div(
-      class = "mt-1",
-      tags$strong("Research use only."),
-      " Candidate gene lists are hypothesis generation for panel design,",
-      " not a diagnostic result."
-    )
+    tags$span(class = "mx-1", "·"),
+    tags$strong("Research use only"),
+    ", not a diagnostic result."
   )
 )

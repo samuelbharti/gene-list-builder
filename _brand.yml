@@ -2,12 +2,14 @@
 # Consumed automatically by bslib via `bs_theme(brand = TRUE)` (see ui.R).
 # Spec: https://posit-dev.github.io/brand-yml/
 #
-# "Cream & Crimson", built from four supplied colours:
+# "Greige & Crimson", built from the supplied colours:
 #
-#   #F3D9B1  warm cream   -> the page ground
-#   #C29979  camel        -> secondary actions and borders
+#   #C29979  camel        -> secondary actions
 #   #C33149  crimson      -> the primary accent
 #   #D4AFB9  dusty rose   -> soft accent, quiet status
+#
+# The supplied #F3D9B1 cream is not used as the ground: across a full page it
+# read as yellow. A warm greige carries the same three accents without it.
 #
 # Two rules carried over from the previous theme:
 #   1. No white anywhere. Bootstrap defaults cards, inputs, dropdowns, modals
@@ -29,9 +31,12 @@ meta:
 
 color:
   palette:
-    canvas: "#F3D9B1" # warm cream ground (supplied)
-    card: "#FCF3E4" # lighter cream raised surface, deliberately not white
-    border: "#DEC3A1" # hairline, sits between cream and camel
+    # The supplied cream (#F3D9B1) read as yellow across a full page, so the
+    # ground is a warm greige instead. The three accent colours below are
+    # unchanged, and greige sits with all of them without adding a fourth hue.
+    canvas: "#EAE3DE" # warm greige ground
+    card: "#F7F2EE" # lighter warm surface, tinted, never white
+    border: "#D9CEC6" # hairline between ground and surface
     tan: "#C29979" # camel (supplied): secondary actions
     crimson: "#C33149" # crimson (supplied): the primary accent
     rose: "#D4AFB9" # dusty rose (supplied): soft accent / quiet status
