@@ -53,7 +53,7 @@ panelapp_collect_panels <- function(
   index_fn = bioclients::panelapp_all_panels,
   max_pages = 8
 ) {
-  d <- biohttp::body_or_null(index_fn(max_pages = max_pages, page_size = 100))
+  d <- glb_client_body(index_fn(max_pages = max_pages, page_size = 100))
   if (is.null(d) || nrow(d) == 0) {
     return(list())
   }
@@ -113,7 +113,7 @@ fetch_panelapp <- function(
     return(empty_gene_table())
   }
 
-  d <- biohttp::body_or_null(panel_fn(panel$id))
+  d <- glb_client_body(panel_fn(panel$id))
   if (is.null(d) || nrow(d) == 0) {
     return(empty_gene_table())
   }

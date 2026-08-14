@@ -56,7 +56,7 @@ fetch_opentargets <- function(
     return(empty_gene_table())
   }
 
-  df <- ot_rows(biohttp::body_or_null(client_fn(efo, size = limit)))
+  df <- ot_rows(glb_client_body(client_fn(efo, size = limit)))
   if (is.null(df) || nrow(df) == 0) {
     return(empty_gene_table())
   }

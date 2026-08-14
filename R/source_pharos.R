@@ -47,7 +47,7 @@ fetch_pharos <- function(
     return(empty_gene_table())
   }
 
-  df <- pharos_rows(biohttp::body_or_null(client_fn(symbols)))
+  df <- pharos_rows(glb_client_body(client_fn(symbols)))
   if (is.null(df) || nrow(df) == 0) {
     return(empty_gene_table())
   }

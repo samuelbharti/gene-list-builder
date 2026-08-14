@@ -1,5 +1,50 @@
 # Aggregate per-source gene tables into one row per gene -----------------------
 
+# Annotate each gene with how HGNC sees its symbol. REPORTING ONLY: this adds a
+# column and changes no score, no ranking and no dedupe.
+#
+# Why report rather than repair. aggregate_sources() dedupes on `gene_symbol`,
+# and as_gene_table() only uppercases, so two sources naming the same gene
+# differently (KMT2A vs the legacy MLL) split into two rows, halving the
+# evidence and understating n_sources. The obvious fix is
+# biobouncer::repair_id(), but its suggestions come from two routes: an
+# authoritative retired/alias map AND a bounded fuzzy search, and report_id()
+# does not say which. Verified behaviour:
+#
+#   ""        -> "AR"       invents a gene from an empty string
+#   ORF1AB    -> OR11A1     fuzzy guess, wrong
+#   C9ORF72   -> C9orf72    case regression, re-splits the key
+#   MLL       -> KMT2A      correct and authoritative
+#
+# Blanket repair would therefore trade a dedupe bug for phantom genes. This
+# column measures how much alias-splitting the corpus actually has, so the
+# decision to repair (and how) can be made on evidence rather than hope.
+#
+# Values: "valid" | "alias of <X>" | "unknown". Falls open to NA if biobouncer
+# is unavailable, so this can never break aggregation.
+symbol_status <- function(symbols) {
+  n <- length(symbols)
+  if (n == 0 || !requireNamespace("biobouncer", quietly = TRUE)) {
+    return(rep(NA_character_, n))
+  }
+  info <- tryCatch(
+    biobouncer::report_id(symbols, "hgnc", how = "cache"),
+    error = function(e) NULL
+  )
+  if (is.null(info)) {
+    return(rep(NA_character_, n))
+  }
+  as.character(ifelse(
+    info$valid %in% TRUE,
+    "valid",
+    ifelse(
+      !is.na(info$suggestion),
+      paste0("alias of ", info$suggestion),
+      "unknown"
+    )
+  ))
+}
+
 # Empty aggregated table (no score_* columns since no sources contributed).
 empty_aggregated_table <- function() {
   tibble::tibble(
@@ -110,6 +155,9 @@ aggregate_sources <- function(
   # gene-driven annotation source canonicalized to a symbol absent from every
   # evidence source) must not enter the candidate list.
   prov <- prov[prov$n_sources > 0, , drop = FALSE]
+
+  # Diagnostic only: how HGNC sees each symbol. Never used for scoring.
+  prov$symbol_status <- symbol_status(prov$gene_symbol)
 
   dplyr::left_join(prov, wide, by = "gene_symbol")
 }

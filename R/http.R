@@ -113,6 +113,17 @@ glb_get <- function(
   ))
 }
 
+# Unwrap a bioclients envelope AND record its status.
+#
+# bioclients uses biohttp's transport directly, so its calls never pass through
+# glb_graphql()/glb_get() and would otherwise be invisible to the recorder.
+# Without this, a migrated adapter whose API is down reports "no_data" (the
+# source answered, nothing found) instead of "error" -- exactly the bug the
+# status work set out to fix. Every bioclients call must go through here.
+glb_client_body <- function(res) {
+  biohttp::body_or_null(glb_status_record(res))
+}
+
 # The `data` field of a GraphQL envelope, or NULL. Preserves the exact contract
 # the old hand-rolled wrappers had, so adapters and their injected test stubs
 # keep working unchanged while the status travels separately.

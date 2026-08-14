@@ -19,7 +19,7 @@ glb_diseases_channel <- function(
   limit = 300,
   client_fn = bioclients::diseases_channel
 ) {
-  d <- biohttp::body_or_null(client_fn(doid, channel = channel, limit = limit))
+  d <- glb_client_body(client_fn(doid, channel = channel, limit = limit))
   if (is.null(d) || nrow(d) == 0) {
     return(data.frame())
   }

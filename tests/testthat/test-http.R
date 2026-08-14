@@ -146,3 +146,70 @@ test_that("every status level maps to a value-box theme and a label", {
   expect_equal(unname(GLB_STATUS_THEME[["no_data"]]), "secondary")
   expect_equal(unname(GLB_STATUS_THEME[["error"]]), "danger")
 })
+
+test_that("a bioclients-backed adapter records its failure status", {
+  # Regression test. bioclients calls biohttp directly, bypassing
+  # glb_graphql()/glb_get(), so migrating the adapters silently reintroduced
+  # the original bug for those sources: a down API reported "no_data" (the
+  # source answered, nothing found) rather than "error". Caught live against a
+  # real Pharos 502. Every bioclients call must go through glb_client_body().
+  src <- list(
+    id = "pharos",
+    label = "Pharos",
+    needs = "genes",
+    role = "annotation",
+    fetch_fn = function(disease, gene_symbols = NULL) {
+      fetch_pharos(
+        gene_symbols = gene_symbols,
+        client_fn = function(symbols, ...) {
+          biohttp::status_error(source = "Pharos", http = 502L)
+        }
+      )
+    }
+  )
+
+  withr::local_envvar(GLB_CACHE_DIR = withr::local_tempdir())
+  out <- .run_one(
+    src,
+    disease = list(id = "MONDO_1"),
+    gene_symbols = c("EGFR"),
+    force = TRUE
+  )
+
+  expect_equal(nrow(out$genes), 0)
+  expect_equal(out$status$status, "error")
+  expect_false(identical(out$status$status, "no_data"))
+})
+
+test_that("a bioclients-backed adapter with a real empty answer is no_data", {
+  src <- list(
+    id = "pharos",
+    label = "Pharos",
+    needs = "genes",
+    role = "annotation",
+    fetch_fn = function(disease, gene_symbols = NULL) {
+      fetch_pharos(
+        gene_symbols = gene_symbols,
+        client_fn = function(symbols, ...) {
+          biohttp::status_ok(
+            tibble::tibble(
+              symbol = symbols,
+              tdl = NA_character_,
+              source_url = NA_character_
+            ),
+            source = "Pharos"
+          )
+        }
+      )
+    }
+  )
+
+  withr::local_envvar(GLB_CACHE_DIR = withr::local_tempdir())
+  out <- .run_one(
+    src,
+    disease = list(id = "MONDO_1"),
+    gene_symbols = c("EGFR"),
+    force = TRUE
+  )
+  expect_equal(out$status$status, "no_data")
+})

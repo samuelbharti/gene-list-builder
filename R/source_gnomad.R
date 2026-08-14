@@ -92,7 +92,7 @@ fetch_gnomad <- function(
     return(empty_gene_table())
   }
 
-  df <- gnomad_rows(biohttp::body_or_null(
+  df <- gnomad_rows(glb_client_body(
     client_fn(symbols, chunk_size = chunk_size)
   ))
   if (is.null(df) || nrow(df) == 0) {

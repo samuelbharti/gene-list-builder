@@ -83,7 +83,7 @@ fetch_dgidb <- function(
   )
 
   parts <- lapply(chunks, function(chunk) {
-    dgidb_rows(biohttp::body_or_null(client_fn(chunk)))
+    dgidb_rows(glb_client_body(client_fn(chunk)))
   })
   df <- do.call(rbind, parts[!vapply(parts, is.null, logical(1))])
   if (is.null(df) || nrow(df) == 0) {
