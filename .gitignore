@@ -16,6 +16,7 @@ dev/.Rhistory
 
 # Local planning / agent artifacts (never committed)
 docs/plans/
+docs/local/
 /plans/
 /skills/
 .claude/
