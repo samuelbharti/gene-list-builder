@@ -19,7 +19,7 @@ Current app version: v0.1.0
 coverage bonus:
 
 | Source | Driven by | Key | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [Open Targets](https://platform.opentargets.org/) | disease | no | Overall association score (0–1); also resolves the disease name to an ontology id. |
 | [PanelApp](https://panelapp.genomicsengland.co.uk/) | disease | no | Genomics England curated diagnostic panels; green/amber confidence → score. |
 | [DISEASES](https://diseases.jensenlab.org/) | disease | no | Text-mined + curated disease–gene associations (keyed by DOID via OT xrefs). |
@@ -30,7 +30,7 @@ coverage bonus:
 inflate coverage:
 
 | Source | Driven by | Key | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [gnomAD](https://gnomad.broadinstitute.org/) | gene | no | Loss-of-function constraint (LOEUF); more constrained → higher score. |
 | [Pharos](https://pharos.nih.gov/) | gene | no | Target Development Level (Tclin → Tdark). |
 
