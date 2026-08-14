@@ -1,4 +1,4 @@
-# Continuous integration for the Shiny app template.
+# Continuous integration for Gene List Builder.
 # Runs on every push/PR to the main development branches.
 #
 # Jobs:
