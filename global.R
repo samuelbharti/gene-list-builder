@@ -2,11 +2,15 @@
 library(shiny)
 library(bslib)
 
-# Optionally theme base/ggplot/lattice output to match the app theme. Activates
-# only if the {thematic} package is installed, so it adds no hard dependency.
-if (requireNamespace("thematic", quietly = TRUE)) {
-  thematic::thematic_shiny(font = "auto")
-}
+# The loading spinner defaults to a saturated Bootstrap blue that clashes with
+# the theme. Pull it to the bronze accent. Read from the compiled theme rather
+# than hard-coded so _brand.yml stays the single source of truth for colour.
+options(
+  spinner.color = bslib::bs_get_variables(
+    bslib::bs_theme(brand = TRUE),
+    "primary"
+  )[["primary"]]
+)
 
 source("R/load_components.R")
 

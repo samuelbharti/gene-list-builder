@@ -2,30 +2,37 @@
 # Consumed automatically by bslib via `bs_theme(brand = TRUE)` (see ui.R).
 # Spec: https://posit-dev.github.io/brand-yml/
 #
-# A clean, minimal light theme: neutral dark-grey text on a soft off-white
-# ground, white cards for hierarchy, and a single restrained dusty-blue accent
-# used only on interactive elements (buttons/links). The semantic colors are
-# muted so status cues read clearly without shouting. ui.R adds the matching
-# minimal Sass (white cards, hairline borders, themed scrollbar).
+# "Bone & Bronze": a warm, low-chroma light theme. Warm near-black text on a
+# bone-coloured ground, near-white cards for hierarchy, and a single muted
+# bronze accent used only on interactive elements (buttons/links). Organic by
+# material rather than by hue, so it avoids the sage-and-terracotta cliche.
+#
+# Every palette entry below is exposed to Sass as `$brand-<name>` (e.g.
+# `$brand-canvas`), and ui.R's Sass references those variables rather than
+# repeating hex codes. This file is the single source of truth for colour:
+# do not hard-code hexes in ui.R.
 
 meta:
   name: Gene List Builder
 
 color:
   palette:
-    paper: "#F7F7F5" # soft off-white background
-    ink: "#2B2E33" # neutral dark grey (text)
-    slate: "#6B7079" # muted grey (secondary)
-    blue: "#4E6E8E" # dusty blue - the single accent
-    green: "#5C8A6A" # muted success
-    amber: "#C98A3C" # muted warning
-    red: "#BE4B3F" # muted danger
+    canvas: "#F2EFE8" # warm bone ground (body background)
+    card: "#FDFCFA" # near-white raised surface
+    border: "#E4DFD4" # the one hairline border token
+    ink: "#26221C" # warm near-black (text)
+    muted: "#736C60" # secondary text
+    bronze: "#8A6A3C" # the single accent
+    green: "#5E7150" # muted success
+    amber: "#C07A2C" # muted warning, pushed toward orange so it stays
+    # distinguishable from the bronze accent
+    red: "#B2503F" # muted danger
   foreground: ink
-  background: paper
-  primary: blue
-  secondary: slate
+  background: canvas
+  primary: bronze
+  secondary: muted
   success: green
-  info: blue
+  info: bronze
   warning: amber
   danger: red
 
