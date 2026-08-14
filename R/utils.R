@@ -55,3 +55,9 @@ first_non_na <- function(x) {
   x <- x[!is.na(x)]
   if (length(x) > 0) x[[1]] else NA
 }
+
+# Null-coalescing operator. Defined here rather than in modules/ because
+# R/load_components.R sources R/ FIRST, and nearly every file in R/ uses it.
+# Base R only exports `%||%` from 4.4.0, so on the R >= 4.3 this project claims
+# to support, R/ would fail to load without this definition.
+`%||%` <- function(a, b) if (is.null(a)) b else a

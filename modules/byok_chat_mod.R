@@ -15,7 +15,7 @@
 # Drop-in generic: pass a `system_prompt` to steer the assistant, and a list of
 # `ellmer::tool()` objects as `tools` to give it tools over your app's data.
 
-`%||%` <- function(a, b) if (is.null(a)) b else a
+# `%||%` lives in R/utils.R, which load_components.R sources before modules/.
 
 # --- Provider registry --------------------------------------------------------
 #

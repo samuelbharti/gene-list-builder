@@ -85,13 +85,13 @@ evidence_source_ids <- function(ids = NULL) {
 
 # Run a single source's fetch_fn with timing + error capture.
 .run_one <- function(src, disease, gene_symbols, force) {
-  key <- cache_key(
+  key <- glb_cache_key(
     src$id,
     disease$id %||% "",
     if (identical(src$needs, "genes")) rlang::hash(sort(gene_symbols)) else ""
   )
   t0 <- Sys.time()
-  result <- if (!force) cache_get(key) else NULL
+  result <- if (!force) glb_cache_get(key) else NULL
   if (is.null(result)) {
     result <- tryCatch(
       src$fetch_fn(disease = disease, gene_symbols = gene_symbols),
@@ -101,7 +101,7 @@ evidence_source_ids <- function(ids = NULL) {
     # on network/API error, so caching empties would pin a transient failure;
     # leaving them uncached lets the next run retry.
     if (!inherits(result, "error") && nrow(result) > 0) {
-      cache_set(key, result)
+      glb_cache_set(key, result)
     }
   }
   latency <- as.numeric(difftime(Sys.time(), t0, units = "secs")) * 1000

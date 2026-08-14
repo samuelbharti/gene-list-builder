@@ -8,7 +8,7 @@ DISEASES_BASE <- "https://api.jensenlab.org/"
 
 # Query one DISEASES channel ("Knowledge" = curated, "Textmining" = mined).
 # Returns a data frame of (gene_symbol, score, url); empty on error/no data.
-diseases_channel <- function(
+glb_diseases_channel <- function(
   doid,
   channel = "Knowledge",
   limit = 300,
@@ -72,7 +72,7 @@ fetch_diseases <- function(
   disease,
   gene_symbols = NULL,
   doid_fn = ot_disease_xref_id,
-  channel_fn = diseases_channel
+  channel_fn = glb_diseases_channel
 ) {
   efo <- disease$id %||% ""
   doid <- if (!is.null(disease$doid)) disease$doid else doid_fn(efo, "DOID")

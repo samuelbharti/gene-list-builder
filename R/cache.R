@@ -4,7 +4,7 @@
 # and slider tuning don't re-hit the APIs. The "force refresh" toggle in the UI
 # bypasses reads. Cache lives under data/cache/ (git-ignored).
 
-cache_dir <- function() {
+glb_cache_dir <- function() {
   dir <- Sys.getenv("GLB_CACHE_DIR", unset = file.path("data", "cache"))
   if (!dir.exists(dir)) {
     dir.create(dir, recursive = TRUE, showWarnings = FALSE)
@@ -13,21 +13,21 @@ cache_dir <- function() {
 }
 
 # Build a stable string key from arbitrary parts.
-cache_key <- function(...) {
+glb_cache_key <- function(...) {
   parts <- lapply(list(...), function(x) paste(as.character(x), collapse = "|"))
   paste(unlist(parts), collapse = "::")
 }
 
 .cache_file <- function(key) {
-  file.path(cache_dir(), paste0(rlang::hash(key), ".rds"))
+  file.path(glb_cache_dir(), paste0(rlang::hash(key), ".rds"))
 }
 
-cache_get <- function(key) {
+glb_cache_get <- function(key) {
   f <- .cache_file(key)
   if (file.exists(f)) readRDS(f) else NULL
 }
 
-cache_set <- function(key, value) {
+glb_cache_set <- function(key, value) {
   saveRDS(value, .cache_file(key))
   invisible(value)
 }
