@@ -75,6 +75,62 @@ test_that("fetch_diseases() takes the max score per gene across channels", {
   expect_equal(gt$source_score_raw[gt$gene_symbol == "TP53"], 4) # max(4,2)
 })
 
+test_that("glb_diseases_channel() maps the bioclients columns", {
+  # Regression test. The existing fetch_diseases tests inject channel_fn one
+  # level ABOVE this, so they kept passing while this function was reading a
+  # source_url column that diseases_channel() does not return. Only a live call
+  # caught it. This asserts against the real column set.
+  client_fn <- function(doid, channel, limit, ...) {
+    biohttp::status_ok(
+      tibble::tibble(
+        symbol = c("KRAS", "TP53"),
+        protein = c("ENSP1", "ENSP2"),
+        score = c(5, 4),
+        channel = channel
+      ),
+      source = "DISEASES"
+    )
+  }
+  out <- glb_diseases_channel("DOID:1324", "Knowledge", client_fn = client_fn)
+  expect_equal(out$gene_symbol, c("KRAS", "TP53"))
+  expect_equal(out$score, c(5, 4))
+  expect_true(all(grepl("DOID%3A1324", out$url)))
+})
+
+test_that("glb_diseases_channel() degrades to empty when the client fails", {
+  failing <- function(doid, channel, limit, ...) {
+    biohttp::status_error(source = "DISEASES")
+  }
+  expect_equal(
+    nrow(glb_diseases_channel("DOID:1", "Knowledge", client_fn = failing)),
+    0
+  )
+})
+
+test_that("fetch_diseases() keeps one channel when the other fails", {
+  # bioclients::diseases_gene_associations() would fail the whole source if
+  # either channel failed. Fetching channels separately preserves the app's
+  # graceful degradation, so curated results survive a Textmining outage.
+  channel_fn <- function(doid, channel, ...) {
+    if (channel == "Knowledge") {
+      data.frame(
+        gene_symbol = c("KRAS"),
+        score = 5,
+        url = "u",
+        stringsAsFactors = FALSE
+      )
+    } else {
+      data.frame()
+    }
+  }
+  gt <- fetch_diseases(
+    list(id = "MONDO_1", name = "x"),
+    doid_fn = function(efo, prefix) "DOID:1324",
+    channel_fn = channel_fn
+  )
+  expect_equal(gt$gene_symbol, "KRAS")
+})
+
 test_that("fetch_diseases() returns empty without a DOID", {
   doid_fn <- function(efo, prefix) NA_character_
   expect_equal(

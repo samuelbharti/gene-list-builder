@@ -4,59 +4,37 @@
 # scores (0-5). The API is keyed by Disease Ontology id (DOID), which we obtain
 # from the Open Targets disease cross-references.
 
-DISEASES_BASE <- "https://api.jensenlab.org/"
-
-# Query one DISEASES channel ("Knowledge" = curated, "Textmining" = mined).
-# Returns a data frame of (gene_symbol, score, url); empty on error/no data.
+# Query one DISEASES channel ("Knowledge" = curated, "Textmining" = mined) via
+# bioclients. Returns a data frame of (gene_symbol, score, url); empty on
+# error or no data.
+#
+# Each channel is fetched SEPARATELY on purpose. bioclients also offers
+# diseases_gene_associations(), which fetches both and returns the failing
+# envelope if EITHER channel fails. That is stricter than this app wants: if
+# Textmining is down, the curated Knowledge results are still worth having, and
+# the previous implementation degraded that way. Per-channel calls preserve it.
 glb_diseases_channel <- function(
   doid,
   channel = "Knowledge",
   limit = 300,
-  get_fn = diseases_get
+  client_fn = bioclients::diseases_channel
 ) {
-  url <- paste0(
-    DISEASES_BASE,
-    channel,
-    "?type1=-26&id1=",
-    utils::URLencode(doid, reserved = TRUE),
-    "&type2=9606&limit=",
-    limit,
-    "&format=json"
-  )
-  body <- get_fn(url)
-  # The API returns a JSON array whose first element maps ENSP id -> entry.
-  entries <- if (is.list(body) && length(body) >= 1) body[[1]] else NULL
-  if (is.null(entries) || length(entries) == 0) {
+  d <- biohttp::body_or_null(client_fn(doid, channel = channel, limit = limit))
+  if (is.null(d) || nrow(d) == 0) {
     return(data.frame())
   }
+  # diseases_channel() returns symbol/protein/score/channel and, unlike
+  # diseases_gene_associations(), carries NO source_url. Build the entity link
+  # from the DOID so the results table and CSV export still have one.
   data.frame(
-    gene_symbol = vapply(
-      entries,
-      function(e) as.character(e$name %||% NA),
-      character(1)
-    ),
-    score = vapply(
-      entries,
-      function(e) as.numeric(e$score %||% NA),
-      numeric(1)
-    ),
-    url = vapply(
-      entries,
-      function(e) as.character(e$url %||% NA),
-      character(1)
+    gene_symbol = as.character(d$symbol),
+    score = as.numeric(d$score),
+    url = paste0(
+      "https://diseases.jensenlab.org/Entity?type1=-26&type2=9606&id1=",
+      utils::URLencode(doid, reserved = TRUE)
     ),
     stringsAsFactors = FALSE
   )
-}
-
-# GET a DISEASES URL, returning parsed JSON (or NULL on error).
-diseases_get <- function(url, timeout = 20) {
-  biohttp::body_or_null(diseases_get_env(url, timeout))
-}
-
-# Envelope-returning form.
-diseases_get_env <- function(url, timeout = 20) {
-  glb_get(url, source = "DISEASES", timeout = timeout)
 }
 
 fetch_diseases <- function(
