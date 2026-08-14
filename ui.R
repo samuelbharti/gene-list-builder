@@ -1,14 +1,14 @@
-# --- Theme: "Ink & Rust" warm tinted Sass pass --------------------------------
+# --- Theme: "Cream & Crimson" warm Sass pass ----------------------------------
 # The palette lives in _brand.yml and reaches this Sass as `$brand-<name>`
 # variables, so there are NO literal hex codes below. Adding a colour means
 # adding a palette entry there, not a hex here.
 #
-# Two rules drive everything:
+# Built on four supplied colours: cream ground, camel secondary, crimson
+# primary, dusty rose. Two rules drive the rest:
 #   1. No white. Bootstrap defaults cards, inputs, dropdowns, modals, tables and
-#      popovers to #FFF, so each is overridden to the sand tint $brand-card.
-#   2. Not one hue family. Cool indigo primary against warm rust secondary, with
-#      ochre highlights and tinted status surfaces, so the page carries real
-#      colour variety instead of a single wash.
+#      popovers to #FFF, so each is overridden to the cream tint $brand-card.
+#   2. Surfaces are tinted, not flat: the card sits lighter than the ground so
+#      hierarchy reads without the border doing all the work.
 .glb_theme <- bslib::bs_add_rules(
   bslib::bs_theme(brand = TRUE),
   "
@@ -37,7 +37,7 @@
     color: $brand-ink;
   }
   .accordion-button:not(.collapsed) {
-    background-color: mix($brand-indigo, $brand-card, 8%);
+    background-color: mix($brand-crimson, $brand-card, 8%);
     color: $brand-ink;
   }
   .bslib-sidebar-layout > .sidebar { background-color: $brand-card; }
@@ -59,27 +59,56 @@
     color: $brand-muted !important;
   }
   .bslib-value-box.bg-success {
-    background-color: mix($brand-sage, $brand-card, 16%) !important;
-    border-left-color: $brand-sage !important;
+    background-color: mix($brand-olive, $brand-card, 16%) !important;
+    border-left-color: $brand-olive !important;
   }
   .bslib-value-box.bg-danger {
     background-color: mix($brand-brick, $brand-card, 14%) !important;
     border-left-color: $brand-brick !important;
   }
   .bslib-value-box.bg-warning {
-    background-color: mix($brand-ochre, $brand-card, 16%) !important;
-    border-left-color: $brand-ochre !important;
+    background-color: mix($brand-amber, $brand-card, 16%) !important;
+    border-left-color: $brand-amber !important;
   }
   .bslib-value-box.bg-secondary {
     background-color: mix($brand-muted, $brand-card, 10%) !important;
     border-left-color: $brand-muted !important;
   }
   .bslib-value-box.bg-primary {
-    background-color: mix($brand-indigo, $brand-card, 14%) !important;
-    border-left-color: $brand-indigo !important;
+    background-color: mix($brand-crimson, $brand-card, 14%) !important;
+    border-left-color: $brand-crimson !important;
   }
 
-  /* Gently rounded, tactile controls. Secondary stays a filled rust so the
+  /* Bootstrap 5.3 drives .text-muted from its own --bs-secondary-color, which
+     lands as a washed-out salmon on this cream ground and fails contrast.
+     Point it at the palette's muted brown instead. */
+  .text-muted, .text-body-secondary {
+    color: $brand-muted !important;
+  }
+
+  /* shinychat renders the greeting and its example prompts using
+     --bs-secondary, which is the camel accent here: camel text on a cream
+     ground is close to unreadable. Give the dock ink text and lift the prompt
+     cards onto the card surface so they read as clickable. */
+  #assistant_dock, .shiny-chat-container { color: $brand-ink; }
+  /* .shiny-chat-greeting hard-sets --bs-secondary on itself and its children,
+     so the opening message renders camel-on-cream. Confirmed by computed
+     style; overridden here rather than guessed at. */
+  .shiny-chat-greeting,
+  .shiny-chat-greeting-content,
+  .shiny-chat-greeting p { color: $brand-ink !important; }
+  .suggestion, .shiny-chat-suggestion-list-item {
+    background-color: $brand-card !important;
+    border: 1px solid $brand-border !important;
+    color: $brand-ink !important;
+    border-radius: 0.5rem;
+  }
+  .suggestion:hover, .shiny-chat-suggestion-list-item:hover {
+    background-color: mix($brand-rose, $brand-card, 30%) !important;
+    border-color: $brand-crimson !important;
+  }
+
+  /* Gently rounded, tactile controls. Secondary stays a filled camel so the
      page carries two distinct accent colours rather than one. */
   .btn { border-radius: 0.5rem; }
   .form-control, .form-select, .selectize-input { border-radius: 0.5rem; }
@@ -87,13 +116,13 @@
   /* Navbar picks up a faint indigo wash so it separates from the cards below
      instead of blending into one continuous sand field. */
   .navbar {
-    background-color: mix($brand-indigo, $brand-card, 7%) !important;
+    background-color: mix($brand-crimson, $brand-card, 7%) !important;
     border-bottom: 1px solid $brand-border;
     box-shadow: none;
   }
   .navbar .navbar-brand, .navbar .nav-link { color: $brand-ink !important; }
   .navbar .nav-link:hover,
-  .navbar .nav-link.active { color: $brand-rust !important; }
+  .navbar .nav-link.active { color: $brand-tan !important; }
   #demo_tour { border-radius: 2rem; font-weight: 600; }
 
   /* Slim, themed scrollbars (the default white track looked jarring on the
@@ -126,7 +155,7 @@
   .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: $brand-card; }
   .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: $brand-card; }
   .driver-popover-navigation-btns button {
-    background-color: $brand-indigo;
+    background-color: $brand-crimson;
     color: $brand-card;
     border: none;
     border-radius: 0.5rem;
@@ -134,7 +163,7 @@
     font-weight: 500;
   }
   .driver-popover-navigation-btns button:hover {
-    background-color: darken($brand-indigo, 8%);
+    background-color: darken($brand-crimson, 8%);
   }
   .driver-popover-close-btn { color: $brand-muted; }
 
@@ -142,8 +171,8 @@
      copy/CSV buttons match the rest of the app. */
   .dataTables_wrapper .dataTables_paginate .paginate_button.current,
   .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
-    background: $brand-indigo !important;
-    border-color: $brand-indigo !important;
+    background: $brand-crimson !important;
+    border-color: $brand-crimson !important;
     color: $brand-card !important;
   }
   .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
@@ -172,13 +201,45 @@
   .buttons-copy:hover, .buttons-csv:hover, .buttons-html5:hover,
   .dt-buttons .btn:hover, .dt-buttons button:hover {
     background: $brand-canvas !important;
-    border-color: $brand-rust !important;
+    border-color: $brand-tan !important;
     color: $brand-ink !important;
   }
-  table.dataTable tbody tr { background-color: $brand-card; }
-  table.dataTable.stripe tbody tr.odd,
-  table.dataTable.display tbody tr.odd { background-color: $brand-canvas; }
-  table.dataTable thead th { border-bottom: 1px solid $brand-border; }
+  /* Table rows. DT renders with Bootstrap's .table-striped/.table-hover here,
+     so the stripe comes from the --bs-table-* custom properties applied to the
+     CELLS, not from any DataTables rule and not from the row background.
+     Setting the variables is the supported hook and avoids a specificity
+     fight; targeting tr background-color silently loses to the td.
+     The stripe is a HALF-strength canvas tint: at full strength this cream
+     ground is saturated enough that alternating rows read as banding rather
+     than as a quiet reading aid. */
+  table.dataTable, .table {
+    --bs-table-bg: #{$brand-card};
+    --bs-table-color: #{$brand-ink};
+    --bs-table-striped-bg: #{mix($brand-canvas, $brand-card, 45%)};
+    --bs-table-striped-color: #{$brand-ink};
+    --bs-table-hover-bg: #{mix($brand-rose, $brand-card, 35%)};
+    --bs-table-hover-color: #{$brand-ink};
+    --bs-table-border-color: #{$brand-border};
+  }
+  /* Header sits slightly deeper than the body so the column names anchor. */
+  table.dataTable thead th {
+    background-color: mix($brand-tan, $brand-card, 22%);
+    border-bottom: 1px solid $brand-border;
+    color: $brand-ink;
+  }
+  .dataTables_wrapper .dataTables_info,
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter { color: $brand-muted; }
+  /* Paging: default Bootstrap greys clashed with the warm palette. */
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: $brand-ink !important;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+    color: $brand-muted !important;
+    opacity: 0.6;
+  }
 
   /* Consistent horizontal gutter on each page's content (not the navbar). */
   .bslib-page-navbar > .container-fluid > .tab-content > .tab-pane {
@@ -218,7 +279,9 @@ bslib::page_navbar(
   # section inside the dock (byok_chat_ui).
   sidebar = bslib::sidebar(
     id = "assistant_dock",
-    title = tagList(shiny::icon("robot"), " Assistant"),
+    # No title: the robot icon and "Assistant" heading were redundant next to
+    # the navbar control that opens this, and dropping them gives the
+    # conversation back the vertical space they occupied.
     position = "left",
     open = "closed",
     width = 600,
@@ -226,7 +289,7 @@ bslib::page_navbar(
       "chat",
       title = NULL,
       greeting = glb_chat_greeting,
-      height = "calc(100vh - 190px)"
+      height = "55vh"
     )
   ),
   bslib::nav_panel("Build", builder_page),
@@ -258,6 +321,38 @@ bslib::page_navbar(
       "Demo",
       icon = icon("circle-play"),
       class = "btn-sm btn-primary my-1"
+    )
+  ),
+  # Site-wide footer, matching the other apps in this family. The research-use
+  # note is deliberate: this tool ranks candidate genes to inform panel design,
+  # it does not make clinical calls.
+  footer = tags$footer(
+    class = "glb-footer border-top text-center text-muted small py-3 px-2",
+    sprintf("Gene List Builder v%s", app_version()),
+    tags$span(class = "mx-1", "·"),
+    "Built by Samuel Bharti",
+    tags$span(class = "mx-1", "·"),
+    tags$a(
+      href = "https://github.com/samuelbharti/gene-list-builder",
+      target = "_blank",
+      rel = "noopener",
+      "Source"
+    ),
+    tags$span(class = "mx-1", "·"),
+    tags$a(
+      href = paste0(
+        "https://github.com/samuelbharti/gene-list-builder",
+        "/blob/main/LICENSE"
+      ),
+      target = "_blank",
+      rel = "noopener",
+      "MIT License"
+    ),
+    tags$div(
+      class = "mt-1",
+      tags$strong("Research use only."),
+      " Candidate gene lists are hypothesis generation for panel design,",
+      " not a diagnostic result."
     )
   )
 )
