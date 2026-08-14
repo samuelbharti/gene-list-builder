@@ -52,6 +52,19 @@ writing one adapter that returns the canonical schema and calling
 
 ## Installation
 
+### Option 1: renv (reproducible)
+
+`renv.lock` pins every dependency, including the exact `biobouncer` version.
+That matters for reproducibility: `biobouncer` bundles the HGNC snapshot used
+for the `symbol_status` column, so the package version determines the result.
+
+```r
+if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+renv::restore()
+```
+
+### Option 2: install directly
+
 `biohttp`, `bioclients`, and `biobouncer` are not on CRAN; they are served from
 an r-universe repo, so a single `install.packages()` call covers everything:
 
@@ -82,9 +95,13 @@ GEMINI_API_KEY=your-key-here
 GLB_GEMINI_MODEL=gemini-flash-lite-latest
 ```
 
-Open Targets and DGIdb are public and need no credentials. API responses are
-cached under `data/cache/` (git-ignored); use the sidebar "Ignore cache" toggle
-to force a refresh.
+Open Targets and DGIdb are public and need no credentials.
+
+Caching happens in two tiers. Finished per-source gene tables are stored under
+`data/cache/` (git-ignored, override with `GLB_CACHE_DIR`), and the sidebar
+"Rebuild from source" toggle bypasses that tier. Underneath, `biohttp` also
+caches the HTTP responses themselves in memory for a short TTL, so that toggle
+does not guarantee a fresh network call; set `BIOHTTP_CACHE_TTL` to shorten it.
 
 ## How to run
 
