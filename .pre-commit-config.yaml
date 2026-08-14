@@ -7,15 +7,23 @@
 exclude: "^(renv/|data/|docs/)"
 
 repos:
+  # Block secrets (API keys, tokens) from ever entering a commit.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
   # R code formatting with air (matches air.toml; same formatter rstudio/shiny uses).
-  - repo: https://github.com/posit-dev/air
-    rev: v0.9.0
+  # The hook lives in air-pre-commit, not the air repo; tags have no "v" prefix.
+  - repo: https://github.com/posit-dev/air-pre-commit
+    rev: 0.9.0
     hooks:
       - id: air-format
 
   # R-specific safety checks (formatting is handled by air above).
+  # Dev tag: the v0.4.3 release pins digest 0.6.36, which fails to compile on R 4.6.
   - repo: https://github.com/lorenzwalthert/precommit
-    rev: v0.4.3
+    rev: v0.4.3.9032
     hooks:
       - id: parsable-R
       - id: no-browser-statement
@@ -40,5 +48,7 @@ repos:
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
+      # "ot"/"OT" is the Open Targets abbreviation used throughout, not a typo.
+      # "socio-economic" is Contributor Covenant wording in CODE_OF_CONDUCT.md.
       - id: codespell
-        args: ["--ignore-words-list=ans,fo"]
+        args: ["--ignore-words-list=ans,fo,ot,unparseable,socio-economic"]
