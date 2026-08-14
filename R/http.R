@@ -19,6 +19,50 @@
 # package: this app sources into the global environment, so a global would
 # shadow the namespace.
 
+# --- Last-transport-status recorder -------------------------------------------
+#
+# Adapters return a canonical tibble and degrade to `empty_gene_table()` on any
+# failure, so by the time the registry sees the result the *reason* is gone.
+# Rather than rewrite all seven adapters (and every injected test stub) to pass
+# envelopes around, the transport helpers record the worst status they saw, and
+# `.run_one()` reads it straight after calling the adapter.
+#
+# This is deliberately process-global state. It is safe here because Shiny is
+# single-threaded and `run_sources()` runs strictly sequentially, one source at
+# a time, resetting before each. It would NOT be safe under ExtendedTask or any
+# concurrent runner: revisit this if the pipeline ever becomes async.
+.glb_http_status <- new.env(parent = emptyenv())
+
+# Clear the recorder. Called once per source, before its adapter runs.
+glb_status_reset <- function() {
+  .glb_http_status$worst <- NULL
+  .glb_http_status$message <- NULL
+  invisible(NULL)
+}
+
+# Record one envelope, keeping only the most severe status seen. biohttp orders
+# STATUS_LEVELS from benign to severe, so a later index wins. A source that
+# makes many calls (PanelApp's page walk, DGIdb's chunks) reports the worst.
+glb_status_record <- function(res) {
+  status <- res$status %||% "ok"
+  cur <- .glb_http_status$worst
+  rank <- function(s) match(s, biohttp::STATUS_LEVELS, nomatch = 1L)
+  if (is.null(cur) || rank(status) > rank(cur)) {
+    .glb_http_status$worst <- status
+    .glb_http_status$message <- res$error
+  }
+  invisible(res)
+}
+
+# Worst status recorded since the last reset, or NULL if nothing was recorded
+# (which happens when a test injects a stub instead of hitting the transport).
+glb_status_worst <- function() {
+  if (is.null(.glb_http_status$worst)) {
+    return(NULL)
+  }
+  list(status = .glb_http_status$worst, message = .glb_http_status$message)
+}
+
 # POST a GraphQL query. Returns an envelope. A GraphQL-level `errors` payload
 # (HTTP 200 with an error body) is converted into an error envelope, so callers
 # do not have to remember to check for it. Four of the seven original wrappers
@@ -40,9 +84,9 @@ glb_graphql <- function(
   )
   gql_err <- biohttp::graphql_error(res, source)
   if (!is.null(gql_err)) {
-    return(gql_err)
+    return(glb_status_record(gql_err))
   }
-  res
+  glb_status_record(res)
 }
 
 # GET JSON. Returns an envelope. `secret_query` is applied at dispatch only, so
@@ -57,7 +101,7 @@ glb_get <- function(
   throttle = NULL,
   secret_query = NULL
 ) {
-  biohttp::get_json(
+  glb_status_record(biohttp::get_json(
     base_url,
     path = path,
     query = query,
@@ -66,7 +110,7 @@ glb_get <- function(
     max_tries = max_tries,
     throttle = throttle,
     secret_query = secret_query
-  )
+  ))
 }
 
 # The `data` field of a GraphQL envelope, or NULL. Preserves the exact contract

@@ -72,11 +72,15 @@ evidence_source_ids <- function(ids = NULL) {
   out
 }
 
-.status_row <- function(src, ok, n_genes, latency_ms, message) {
+# `status` is one of biohttp::STATUS_LEVELS. `ok` is DERIVED, never passed in,
+# so the two can never disagree. Keeping `ok` means existing consumers
+# (source_status_mod, report.R) keep working while callers migrate to `status`.
+.status_row <- function(src, status, n_genes, latency_ms, message) {
   tibble::tibble(
     source_id = src$id,
     label = src$label,
-    ok = ok,
+    status = status,
+    ok = identical(status, "ok"),
     n_genes = as.integer(n_genes),
     latency_ms = as.integer(latency_ms),
     message = message
@@ -92,11 +96,16 @@ evidence_source_ids <- function(ids = NULL) {
   )
   t0 <- Sys.time()
   result <- if (!force) glb_cache_get(key) else NULL
+  from_cache <- !is.null(result)
+  transport <- NULL
   if (is.null(result)) {
+    # Clear the transport recorder so whatever this adapter reports is its own.
+    glb_status_reset()
     result <- tryCatch(
       src$fetch_fn(disease = disease, gene_symbols = gene_symbols),
       error = function(e) e
     )
+    transport <- glb_status_worst()
     # Cache only successful, non-empty results. Adapters return an empty table
     # on network/API error, so caching empties would pin a transient failure;
     # leaving them uncached lets the next run retry.
@@ -107,23 +116,32 @@ evidence_source_ids <- function(ids = NULL) {
   latency <- as.numeric(difftime(Sys.time(), t0, units = "secs")) * 1000
 
   if (inherits(result, "error")) {
-    list(
+    # The adapter itself raised: that is a code fault, not a network one.
+    return(list(
       genes = empty_gene_table(),
-      status = .status_row(src, FALSE, 0L, latency, conditionMessage(result))
-    )
-  } else {
-    n <- nrow(result)
-    list(
-      genes = result,
-      status = .status_row(
-        src,
-        TRUE,
-        n,
-        latency,
-        if (n == 0) "no genes returned" else "ok"
-      )
-    )
+      status = .status_row(src, "error", 0L, latency, conditionMessage(result))
+    ))
   }
+
+  n <- nrow(result)
+  # Precedence: a transport failure explains an empty table, so it wins over
+  # "no_data". This is the whole point of the change: a source that timed out
+  # must never again be reported as a source that simply found nothing.
+  if (!is.null(transport) && !identical(transport$status, "ok")) {
+    status <- transport$status
+    message <- transport$message %||% status
+  } else if (n == 0) {
+    status <- "no_data"
+    message <- "no genes returned"
+  } else {
+    status <- "ok"
+    message <- if (from_cache) "ok (cached)" else "ok"
+  }
+
+  list(
+    genes = result,
+    status = .status_row(src, status, n, latency, message)
+  )
 }
 
 # Orchestrate the selected sources. `on_progress(detail)` is called once per
@@ -215,6 +233,7 @@ demo_run_sources <- function(disease, source_ids) {
     tibble::tibble(
       source_id = id,
       label = id,
+      status = "ok",
       ok = TRUE,
       n_genes = nrow(results[[id]]),
       latency_ms = 0L,
