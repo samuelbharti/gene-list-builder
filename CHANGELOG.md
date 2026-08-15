@@ -4,6 +4,28 @@ All notable changes to this project should be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-15
+
+### Fixed
+
+- `renv.lock` and `manifest.json` recorded `biobouncer`, `biohttp` and
+  `bioclients` with the R-universe URL as their repository. Connect Cloud
+  installs from CRAN and Bioconductor and cannot read that, so deployment
+  stopped with "installation of biobouncer failed". All three now record the
+  public GitHub source, pinned to the commit of the newest R-universe build.
+- `manifest.json` did not name `brand.yml`. bslib lists it under Suggests, so
+  Connect Cloud never installed it and `bs_theme(brand = TRUE)` failed at
+  startup. It is now named explicitly.
+- The Zenodo DOI badge did not render. GitHub proxies README images through
+  camo, and Zenodo answers camo with a 429. It is now a shields.io badge with
+  the same DOI and link target.
+
+### Changed
+
+- Shortened the Code of Conduct, which still carried the `[INSERT CONTACT
+  METHOD]` placeholder, and rewrote the contributing guide.
+- Added a security policy, and an Author section to the README.
+
 ## [0.2.0] - 2026-08-14
 
 - Built the core pipeline: disease-to-ontology resolution (Open Targets),
