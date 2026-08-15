@@ -1,9 +1,9 @@
 cff-version: 1.1.0
 message: "If you use this software, please cite it as below."
 title: "Gene List Builder"
-version: "0.2.0"
+version: "0.2.1"
 doi: "10.5281/zenodo.21936036"
-date-released: "2026-08-14"
+date-released: "2026-08-15"
 authors:
   - family-names: Bharti
     given-names: Samuel

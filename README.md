@@ -15,7 +15,7 @@ API-by-hand curation workflow with a reproducible pipeline:
 5. **Curate** the final list with an AI agent (Google Gemini), on demand.
 6. **Export** the gene list (CSV) and a run report (Markdown).
 
-Current app version: v0.2.0
+Current app version: v0.2.1
 
 ## Data sources
 
@@ -212,7 +212,7 @@ explains how to report it privately.
 
 ## Author
 
-Samuel Bharti, sole author and maintainer.
+Samuel Bharti
 
 - Email: <samuelbharti.io@gmail.com>
 - Web: [samuelbharti.com](https://www.samuelbharti.com)
