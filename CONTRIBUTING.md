@@ -1,50 +1,56 @@
-# Contributing Guidelines
+# Contributing
 
-## Branching
+Thanks for looking. This is a solo project, so please open an issue before you
+start on anything large. That way I can tell you early whether I want it, and
+you do not waste the work. Small fixes are welcome as a pull request straight
+away.
 
-- Create feature branches from `main`.
-- Open pull requests into `main` unless instructed otherwise.
+Please also read the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Local Setup
+## Setup
 
-1. Restore dependencies with `renv::restore()`.
-2. Run the app locally with `shiny::runApp()`.
-3. (Recommended) Install the git pre-commit hooks:
+```r
+renv::restore()   # install the pinned dependencies
+shiny::runApp()   # run the app
+```
 
-   ```bash
-   pip install prek
-   prek install
-   ```
+The git hooks are optional but recommended:
 
-## Code Style
+```bash
+pip install prek
+prek install
+```
 
-- Keep page UI definitions in `userInterface/`.
-- Keep reusable UI/server logic in `modules/`.
-- Keep utility functions in `R/` (auto-sourced by `R/load_components.R`).
-- Format R code with [air](https://posit-dev.github.io/air/): check with
-  `air format --check .` and apply with `air format .` (config in `air.toml`).
+## Where code goes
 
-## Testing
+- `R/` for pure logic: the schema, the source adapters, the ranking, the
+  curator. `R/load_components.R` sources them for you.
+- `modules/` for Shiny modules.
+- `userInterface/` for the page layouts.
+- `tests/testthat/` for the tests.
 
-- Tests live in `tests/testthat/`. Run them with:
+To add a gene-disease source, write one adapter that returns the canonical
+schema and call `register_source()` in `R/source_registry.R`. Nothing in the
+pipeline needs to change.
 
-  ```r
-  shiny::runTests(".")
-  ```
+## Before you open a pull request
 
-- Add unit tests for `R/` helpers, `shiny::testServer()` tests for module
-  reactivity, and `shinytest2` tests for end-to-end behavior.
+Branch from `main` and open the pull request against `main`. Then check that
+all of this passes:
 
-## Continuous Integration
+```bash
+air format --check .      # format, configured in air.toml
+```
 
-Every push and pull request runs the `CI` workflow (`.github/workflows/ci.yaml`):
-lint, formatting check, the test suite, and Markdown linting. Make sure these
-pass locally before opening a PR.
+```r
+shiny::runTests(".")      # tests
+shiny::runApp()           # the app still starts
+```
 
-## Pull Request Checklist
+Add a test for what you changed: a unit test for an `R/` helper, a
+`shiny::testServer()` test for module reactivity, or a `shinytest2` test for
+end-to-end behavior. Tests run without network access, so stub any new client.
+If behavior changed, update the README too.
 
-- [ ] App runs locally (`shiny::runApp()`).
-- [ ] Code is formatted (`air format --check .` passes).
-- [ ] Tests pass (`shiny::runTests(".")`).
-- [ ] New/changed code follows the project structure.
-- [ ] README/docs updated if behavior changed.
+The `CI` workflow runs the same lint, format check, tests, and Markdown lint on
+every push and pull request.
