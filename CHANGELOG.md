@@ -4,6 +4,14 @@ All notable changes to this project should be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-10
+
+### Added
+
+- GoatCounter, a visit counter that sets no cookie, in the page head. The
+  recorded path begins with the hostname, so every application of the
+  bioinformatics gallery lands in one dashboard.
+
 ## [0.2.1] - 2026-08-15
 
 ### Fixed
