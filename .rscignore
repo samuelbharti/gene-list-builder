@@ -46,3 +46,7 @@ template.yml
 .lintr
 .markdownlint.json
 .markdownlintignore
+
+# The demo clip for the bioinformatics gallery. The site serves it; the app
+# does not.
+assets

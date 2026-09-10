@@ -11,6 +11,8 @@ All notable changes to this project should be documented in this file.
 - GoatCounter, a visit counter that sets no cookie, in the page head. The
   recorded path begins with the hostname, so every application of the
   bioinformatics gallery lands in one dashboard.
+- `assets/demo.mp4`, a short clip of the app for the bioinformatics gallery.
+  `assets` is in `.rscignore`, so a deployment does not carry it.
 
 ## [0.2.1] - 2026-08-15
 
